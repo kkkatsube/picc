@@ -139,6 +139,12 @@ picc/
 
 ## Important Notes for Claude Code
 
+### Required Reading on Session Start
+When starting a new Claude Code session, automatically read these essential documents to understand the full project context:
+- **docs/architecture.md** - Complete technical specifications and system design
+- **docs/technology-decisions.md** - Technology selection rationale, excluded options, and learning strategy
+
+### Development Guidelines
 - Always check `docs/architecture.md` for detailed technical specifications
 - Follow the established API-first development workflow
 - Use the existing Docker environment for development

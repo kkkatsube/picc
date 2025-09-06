@@ -3,6 +3,9 @@ node_modules/
 npm-debug.log
 yarn-error.log
 
+# Serena (Claude Code assistant files)
+.serena/
+
 # Laravel 4 specific
 bootstrap/compiled.php
 app/storage/

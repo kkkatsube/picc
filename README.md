@@ -24,18 +24,31 @@ PICCは現代的なWebアプリケーション開発技術をキャッチアッ�
 git clone https://github.com/your-username/picc.git
 cd picc
 
-# 開発環境起動
+# 統合Docker環境起動（Backend + Frontend + Database）
 docker-compose up -d
 
-# フロントエンド開発サーバー起動
-cd frontend
-npm install
-npm run dev
+# フロントエンドAPI型生成（初回のみ）
+cd frontend && npm run generate-api
 ```
 
-- **API**: http://localhost:8000/api
+### アクセス先
 - **フロントエンド**: http://localhost:3000
-- **API ドキュメント**: http://localhost:8000/docs
+- **バックエンドAPI**: http://localhost:8000/api
+- **データベース**: localhost:5432 (PostgreSQL)
+- **Redis**: localhost:6379
+
+### 開発コマンド
+```bash
+# 環境確認
+docker-compose ps
+
+# ログ確認
+docker-compose logs -f backend
+docker-compose logs -f frontend
+
+# 環境停止
+docker-compose down
+```
 
 ## 📚 ドキュメント
 
@@ -80,8 +93,8 @@ npm run dev
 ## 📝 開発状況
 
 - [x] 技術選定・アーキテクチャ設計
-- [ ] 開発環境セットアップ
-- [ ] OpenAPI仕様書作成
+- [x] 開発環境セットアップ（Docker統合環境）
+- [x] OpenAPI仕様書作成（基本認証API）
 - [ ] バックエンドAPI実装
 - [ ] フロントエンドSPA実装
 - [ ] インフラ構築

@@ -63,15 +63,8 @@ jobs:
     - name: Update testing environment
       run: |
         cd backend
-        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env.testing
-        sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env.testing
-        sed -i 's/DB_PORT=.*/DB_PORT=5432/' .env.testing
-        sed -i 's/DB_DATABASE=.*/DB_DATABASE=picc_test/' .env.testing
-        sed -i 's/DB_USERNAME=.*/DB_USERNAME=postgres/' .env.testing
-        sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=secret/' .env.testing
-        sed -i 's/REDIS_HOST=.*/REDIS_HOST=127.0.0.1/' .env.testing
-        sed -i 's/REDIS_PORT=.*/REDIS_PORT=6379/' .env.testing
-        echo "APP_ENV=testing" >> .env.testing
+        # .env.testing is already configured properly
+        echo "Using pre-configured .env.testing file"
 
     - name: Get Composer Cache Directory
       id: composer-cache

@@ -4,7 +4,10 @@ import App from './App'
 
 // Mock the fetch function
 const mockFetch = vi.fn()
-global.fetch = mockFetch
+Object.defineProperty(global, 'fetch', {
+  writable: true,
+  value: mockFetch
+})
 
 describe('App', () => {
   beforeEach(() => {

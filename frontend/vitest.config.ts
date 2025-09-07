@@ -1,4 +1,5 @@
 /// <reference types="vitest" />
+/// <reference types="vitest/globals" />
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { resolve } from 'path'
@@ -20,6 +21,10 @@ export default defineConfig({
         '**/*.config.*',
         '**/*.d.ts',
       ],
+    },
+    typecheck: {
+      checker: 'tsc',
+      include: ['**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}'],
     },
   },
   resolve: {

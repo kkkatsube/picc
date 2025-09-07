@@ -24,9 +24,16 @@ jobs:
 
     - name: Create environment file
       run: |
-        cp backend/.env.example backend/.env
-        sed -i 's/DB_HOST=.*/DB_HOST=picc-database-1/' backend/.env
-        sed -i 's/REDIS_HOST=.*/REDIS_HOST=picc-redis-1/' backend/.env
+        cd backend
+        cp .env.example .env
+        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env
+        sed -i 's/#DB_HOST=.*/DB_HOST=picc-database-1/' .env
+        sed -i 's/#DB_PORT=.*/DB_PORT=5432/' .env  
+        sed -i 's/#DB_DATABASE=.*/DB_DATABASE=picc/' .env
+        sed -i 's/#DB_USERNAME=.*/DB_USERNAME=postgres/' .env
+        sed -i 's/#DB_PASSWORD=.*/DB_PASSWORD=secret/' .env
+        sed -i 's/REDIS_HOST=.*/REDIS_HOST=picc-redis-1/' .env
+        echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
 
     - name: Build and start services
       run: |
@@ -93,7 +100,7 @@ jobs:
 
     - name: Validate OpenAPI specification
       run: |
-        swagger-parser validate docs/api/openapi.yml
+        npx swagger-parser validate docs/api/openapi.yml
 
     - name: Check API specification consistency
       run: |

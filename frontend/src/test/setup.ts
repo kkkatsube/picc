@@ -1,40 +1,50 @@
 import '@testing-library/jest-dom'
+import { vi } from 'vitest'
 
 // Mock IntersectionObserver
-global.IntersectionObserver = class IntersectionObserver {
-  constructor() {}
-  observe() {
-    return null
+Object.defineProperty(global, 'IntersectionObserver', {
+  writable: true,
+  value: class IntersectionObserver {
+    constructor() {}
+    observe() {
+      return null
+    }
+    disconnect() {
+      return null
+    }
+    unobserve() {
+      return null
+    }
   }
-  disconnect() {
-    return null
-  }
-  unobserve() {
-    return null
-  }
-}
+})
 
-// Mock ResizeObserver
-global.ResizeObserver = class ResizeObserver {
-  constructor() {}
-  observe() {
-    return null
+// Mock ResizeObserver  
+Object.defineProperty(global, 'ResizeObserver', {
+  writable: true,
+  value: class ResizeObserver {
+    constructor() {}
+    observe() {
+      return null
+    }
+    disconnect() {
+      return null
+    }
+    unobserve() {
+      return null
+    }
   }
-  disconnect() {
-    return null
-  }
-  unobserve() {
-    return null
-  }
-}
+})
 
 // Mock fetch API
-global.fetch = vi.fn()
+Object.defineProperty(global, 'fetch', {
+  writable: true,
+  value: vi.fn()
+})
 
 // Mock window.matchMedia
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
-  value: vi.fn().mockImplementation(query => ({
+  value: vi.fn().mockImplementation((query: string) => ({
     matches: false,
     media: query,
     onchange: null,

@@ -16,17 +16,25 @@ describe('App', () => {
     
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toBeInTheDocument()
-    expect(heading).toHaveTextContent(/PICC/i)
+    expect(heading).toHaveTextContent(/PICC Development Environment/i)
   })
 
-  it('displays initial API status', () => {
+  it('displays frontend and backend status', () => {
     render(<App />)
     
-    // Should show error status initially
-    expect(screen.getByText(/API Status:/)).toBeInTheDocument()
+    // Should show frontend status
+    expect(screen.getByText(/Frontend \(React \+ Vite\)/)).toBeInTheDocument()
+    expect(screen.getByText(/Backend API/)).toBeInTheDocument()
   })
 
-  it('handles API health check', async () => {
+  it('has test connection button', () => {
+    render(<App />)
+    
+    const testButton = screen.getByText(/Test Connection/i)
+    expect(testButton).toBeInTheDocument()
+  })
+
+  it('handles API health check success', async () => {
     const mockHealthResponse = {
       status: 'ok',
       message: 'All systems operational',
@@ -55,11 +63,17 @@ describe('App', () => {
 
     render(<App />)
     
-    const testButton = screen.getByText(/test api/i)
+    const testButton = screen.getByText(/Test Connection/i)
     fireEvent.click(testButton)
 
+    // Should show loading state
     await waitFor(() => {
-      expect(screen.getByText(/success/i)).toBeInTheDocument()
+      expect(screen.getByText(/Testing.../i)).toBeInTheDocument()
+    })
+
+    // Should show success result
+    await waitFor(() => {
+      expect(screen.getByText(/All systems operational/i)).toBeInTheDocument()
     })
 
     expect(mockFetch).toHaveBeenCalledWith('/api/health')
@@ -70,15 +84,20 @@ describe('App', () => {
 
     render(<App />)
     
-    const testButton = screen.getByText(/test api/i)
+    const testButton = screen.getByText(/Test Connection/i)
     fireEvent.click(testButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/error/i)).toBeInTheDocument()
+      expect(screen.getByText(/Testing.../i)).toBeInTheDocument()
+    })
+
+    // Should return to Test Connection after error
+    await waitFor(() => {
+      expect(screen.getByText(/Test Connection/i)).toBeInTheDocument()
     })
   })
 
-  it('displays service status when available', async () => {
+  it('displays service details when health check returns data', async () => {
     const mockHealthResponse = {
       status: 'error',
       message: 'Some systems have issues',
@@ -107,12 +126,13 @@ describe('App', () => {
 
     render(<App />)
     
-    const testButton = screen.getByText(/test api/i)
+    const testButton = screen.getByText(/Test Connection/i)
     fireEvent.click(testButton)
 
     await waitFor(() => {
-      expect(screen.getByText(/Database: error/i)).toBeInTheDocument()
-      expect(screen.getByText(/Redis: ok/i)).toBeInTheDocument()
+      expect(screen.getByText(/Some systems have issues/i)).toBeInTheDocument()
+      expect(screen.getByText(/API is healthy/i)).toBeInTheDocument()
+      expect(screen.getByText(/Database connection failed/i)).toBeInTheDocument()
     })
   })
 })

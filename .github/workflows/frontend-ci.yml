@@ -46,7 +46,7 @@ jobs:
     - name: Run Vitest tests
       run: |
         cd frontend
-        npm run test -- --coverage --reporter=verbose
+        npm run test -- --run --coverage --reporter=verbose
 
     - name: Build application
       run: |
@@ -57,7 +57,7 @@ jobs:
       run: |
         cd frontend
         echo "📊 Frontend Test Coverage Summary:"
-        npm run test:coverage -- --reporter=verbose
+        npm run test:coverage -- --run --reporter=verbose
 
   build-check:
     name: Build & Bundle Analysis

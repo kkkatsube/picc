@@ -7,20 +7,14 @@ function App() {
   const [healthData, setHealthData] = useState<HealthResponse | null>(null)
 
   const checkAPI = async () => {
-    console.log('Starting API check...')
     setApiStatus('loading')
     try {
-      console.log('Fetching /api/health...')
       const response = await fetch('/api/health')
-      console.log('Response received:', response.status, response.statusText)
       const data: HealthResponse = await response.json()
-      console.log('Data parsed:', data)
       
       setHealthData(data)
       setApiStatus(data.status === HealthResponse.status.OK ? 'success' : 'error')
-      console.log('API status set to:', data.status === 'ok' ? 'success' : 'error')
     } catch (error) {
-      console.error('API check failed:', error)
       setApiStatus('error')
       setHealthData(null)
     }

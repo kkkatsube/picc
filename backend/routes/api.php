@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\HealthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -15,14 +16,7 @@ use Illuminate\Support\Facades\Route;
 */
 
 // Health Check Endpoint
-Route::get('/health', function () {
-    return response()->json([
-        'status' => 'ok',
-        'message' => 'API is healthy',
-        'timestamp' => now()->toISOString(),
-        'version' => '1.0.0'
-    ]);
-});
+Route::get('/health', [HealthController::class, 'check']);
 
 // User authentication route (for future use)
 Route::middleware('auth:sanctum')->get('/user', function (Request $request) {

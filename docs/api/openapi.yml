@@ -144,10 +144,11 @@ components:
       properties:
         status:
           type: string
+          enum: [ok, error]
           example: "ok"
         message:
           type: string
-          example: "API is healthy"
+          example: "All systems operational"
         timestamp:
           type: string
           format: date-time
@@ -155,10 +156,49 @@ components:
         version:
           type: string
           example: "1.0.0"
+        checks:
+          type: object
+          properties:
+            api:
+              $ref: '#/components/schemas/HealthCheck'
+            database:
+              $ref: '#/components/schemas/HealthCheck'
+            redis:
+              $ref: '#/components/schemas/HealthCheck'
+          required:
+            - api
+            - database
+            - redis
       required:
         - status
         - message
         - timestamp
+        - version
+        - checks
+
+    HealthCheck:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, error]
+          example: "ok"
+        message:
+          type: string
+          example: "API is healthy"
+        connection_time_ms:
+          type: number
+          format: float
+          example: 7.59
+        driver:
+          type: string
+          example: "pgsql"
+        error:
+          type: string
+          example: "Connection failed"
+      required:
+        - status
+        - message
 
     RegisterRequest:
       type: object

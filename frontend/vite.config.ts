@@ -12,7 +12,7 @@ export default defineConfig({
     },
     proxy: {
       '/api': {
-        target: 'http://backend',
+        target: 'http://picc-backend-1:80',
         changeOrigin: true,
         secure: false,
       }

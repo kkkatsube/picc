@@ -1,0 +1,148 @@
+name: Backend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/backend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'backend/**'
+      - 'docker-compose.yml'
+      - '.github/workflows/backend-ci.yml'
+
+jobs:
+  laravel-tests:
+    name: Laravel Tests & Quality Checks
+    runs-on: ubuntu-latest
+    
+    services:
+      postgres:
+        image: postgres:15-alpine
+        env:
+          POSTGRES_DB: picc_test
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: secret
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 5432:5432
+
+      redis:
+        image: redis:7-alpine
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+        ports:
+          - 6379:6379
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+        coverage: xdebug
+
+    - name: Copy environment file
+      run: |
+        cd backend
+        cp .env.example .env.testing
+        
+    - name: Update testing environment
+      run: |
+        cd backend
+        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env.testing
+        sed -i 's/DB_HOST=.*/DB_HOST=127.0.0.1/' .env.testing
+        sed -i 's/DB_PORT=.*/DB_PORT=5432/' .env.testing
+        sed -i 's/DB_DATABASE=.*/DB_DATABASE=picc_test/' .env.testing
+        sed -i 's/DB_USERNAME=.*/DB_USERNAME=postgres/' .env.testing
+        sed -i 's/DB_PASSWORD=.*/DB_PASSWORD=secret/' .env.testing
+        sed -i 's/REDIS_HOST=.*/REDIS_HOST=127.0.0.1/' .env.testing
+        sed -i 's/REDIS_PORT=.*/REDIS_PORT=6379/' .env.testing
+        echo "APP_ENV=testing" >> .env.testing
+
+    - name: Get Composer Cache Directory
+      id: composer-cache
+      run: echo "dir=$(cd backend && composer config cache-files-dir)" >> $GITHUB_OUTPUT
+
+    - name: Cache Composer dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{ steps.composer-cache.outputs.dir }}
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: ${{ runner.os }}-composer-
+
+    - name: Install Composer dependencies
+      run: |
+        cd backend
+        composer install --no-progress --no-suggest --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Generate application key
+      run: |
+        cd backend
+        php artisan key:generate --env=testing
+
+    - name: Wait for services to be ready
+      run: |
+        timeout 30 bash -c 'until nc -z 127.0.0.1 5432; do sleep 1; done'
+        timeout 30 bash -c 'until nc -z 127.0.0.1 6379; do sleep 1; done'
+
+    - name: Run database migrations
+      run: |
+        cd backend
+        php artisan migrate --env=testing --force
+
+    - name: Run Pest tests
+      run: |
+        cd backend
+        ./vendor/bin/pest --coverage-text --coverage-clover=coverage.xml
+
+    - name: Run PHPStan static analysis
+      run: |
+        cd backend
+        ./vendor/bin/phpstan analyse --error-format=github
+
+    - name: Check Laravel Pint code style
+      run: |
+        cd backend
+        ./vendor/bin/pint --test
+
+    - name: Display coverage summary
+      run: |
+        cd backend
+        echo "📊 Backend Test Coverage Summary:"
+        ./vendor/bin/pest --coverage-text --min=80
+
+  security-check:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+
+    - name: Install Composer dependencies
+      run: |
+        cd backend
+        composer install --no-dev --no-progress --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Run security audit
+      run: |
+        cd backend
+        composer audit --format=plain

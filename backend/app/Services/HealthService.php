@@ -55,11 +55,18 @@ class HealthService
             DB::connection()->getPdo();
             $connectionTime = round((microtime(true) - $start) * 1000, 2);
             
+            $driver = 'unknown';
+            try {
+                $driver = config('database.default', 'unknown');
+            } catch (Exception $e) {
+                // Config not available in test environment
+            }
+            
             return [
                 'status' => 'ok',
                 'message' => 'Database connection successful',
                 'connection_time_ms' => $connectionTime,
-                'driver' => config('database.default')
+                'driver' => $driver
             ];
         } catch (Exception $e) {
             return [

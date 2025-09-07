@@ -1,0 +1,97 @@
+name: Frontend CI
+
+on:
+  push:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+  pull_request:
+    branches: [ main, develop ]
+    paths:
+      - 'frontend/**'
+      - '.github/workflows/frontend-ci.yml'
+
+jobs:
+  react-tests:
+    name: React Tests & Quality Checks
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Run TypeScript type check
+      run: |
+        cd frontend
+        npm run type-check
+
+    - name: Run ESLint
+      run: |
+        cd frontend
+        npm run lint
+
+    - name: Run Vitest tests
+      run: |
+        cd frontend
+        npm run test -- --coverage --reporter=verbose
+
+    - name: Build application
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Display coverage summary  
+      run: |
+        cd frontend
+        echo "📊 Frontend Test Coverage Summary:"
+        npm run test:coverage -- --reporter=verbose
+
+  build-check:
+    name: Build & Bundle Analysis
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: Build for production
+      run: |
+        cd frontend
+        npm run build
+
+    - name: Analyze bundle size
+      run: |
+        cd frontend
+        npm run build:analyze 2>/dev/null || echo "Bundle analysis not configured"
+
+    - name: Check build artifacts
+      run: |
+        cd frontend
+        ls -la dist/
+        du -sh dist/
+        echo "Build successful - artifacts created"

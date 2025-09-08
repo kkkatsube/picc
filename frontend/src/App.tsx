@@ -14,7 +14,7 @@ function App() {
       
       setHealthData(data)
       setApiStatus(data.status === HealthResponse.status.OK ? 'success' : 'error')
-    } catch (error) {
+    } catch {
       setApiStatus('error')
       setHealthData(null)
     }

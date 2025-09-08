@@ -18,5 +18,4 @@ parameters:
         - ./storage/*
         - ./bootstrap/cache/*
         
-    checkMissingIterableValueType: false
     reportUnmatchedIgnoredErrors: false

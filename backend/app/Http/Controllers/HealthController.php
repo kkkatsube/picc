@@ -17,9 +17,9 @@ class HealthController extends Controller
     public function check(): JsonResponse
     {
         $healthData = $this->healthService->checkSystemHealth();
-        
+
         $statusCode = $healthData['status'] === 'ok' ? 200 : 503;
-        
+
         return response()->json($healthData, $statusCode);
     }
 }

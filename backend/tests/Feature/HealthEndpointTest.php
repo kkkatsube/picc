@@ -1,6 +1,5 @@
 <?php
 
-use App\Services\HealthService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
 
@@ -27,8 +26,8 @@ describe('Health Endpoint', function () {
                 'checks' => [
                     'api' => ['status', 'message'],
                     'database' => ['status', 'message', 'connection_time_ms', 'driver'],
-                    'redis' => ['status', 'message', 'connection_time_ms']
-                ]
+                    'redis' => ['status', 'message', 'connection_time_ms'],
+                ],
             ])
             ->assertJson([
                 'status' => 'ok',
@@ -37,17 +36,17 @@ describe('Health Endpoint', function () {
                 'checks' => [
                     'api' => [
                         'status' => 'ok',
-                        'message' => 'API is healthy'
+                        'message' => 'API is healthy',
                     ],
                     'database' => [
                         'status' => 'ok',
-                        'message' => 'Database connection successful'
+                        'message' => 'Database connection successful',
                     ],
                     'redis' => [
                         'status' => 'ok',
-                        'message' => 'Redis connection successful'
-                    ]
-                ]
+                        'message' => 'Redis connection successful',
+                    ],
+                ],
             ]);
 
         // Verify response contains expected fields
@@ -78,12 +77,12 @@ describe('Health Endpoint', function () {
                 'checks' => [
                     'database' => [
                         'status' => 'error',
-                        'message' => 'Database connection failed'
+                        'message' => 'Database connection failed',
                     ],
                     'redis' => [
-                        'status' => 'ok'
-                    ]
-                ]
+                        'status' => 'ok',
+                    ],
+                ],
             ]);
     });
 
@@ -107,14 +106,14 @@ describe('Health Endpoint', function () {
                 'message' => 'Some systems have issues',
                 'checks' => [
                     'database' => [
-                        'status' => 'ok'
+                        'status' => 'ok',
                     ],
                     'redis' => [
                         'status' => 'error',
                         'message' => 'Redis connection failed',
-                        'error' => 'Redis server not available'
-                    ]
-                ]
+                        'error' => 'Redis server not available',
+                    ],
+                ],
             ]);
     });
 

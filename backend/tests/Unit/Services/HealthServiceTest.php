@@ -3,15 +3,15 @@
 use App\Services\HealthService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Tests\TestCase;
 use Mockery;
+use Tests\TestCase;
 
 uses(TestCase::class);
 
 beforeEach(function () {
     // Clear any existing mocks
     Mockery::close();
-    $this->service = new HealthService();
+    $this->service = new HealthService;
 });
 
 afterEach(function () {

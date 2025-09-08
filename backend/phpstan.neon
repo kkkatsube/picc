@@ -1,0 +1,22 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - tests/
+
+    # Rule level (0-10, higher is stricter)
+    level: 8
+
+    ignoreErrors:
+        # Ignore Laravel auto-generated files
+        - '#Laravel\\.*#'
+        
+    excludePaths:
+        - ./vendor/*
+        - ./storage/*
+        - ./bootstrap/cache/*
+        
+    checkMissingIterableValueType: false
+    reportUnmatchedIgnoredErrors: false

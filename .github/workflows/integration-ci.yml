@@ -96,7 +96,8 @@ jobs:
 
     - name: Install OpenAPI tools
       run: |
-        npm install -g @apidevtools/swagger-parser
+        npm init -y
+        npm install @apidevtools/swagger-parser
 
     - name: Validate OpenAPI specification
       run: |

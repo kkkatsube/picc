@@ -65,56 +65,58 @@ jobs:
         echo "Waiting for services to start up..."
         sleep 10
         
-        # Check if services are running
-        ./vendor/bin/sail ps
+        # Check if services are running with docker compose
+        docker compose ps
         
-        # Wait for PostgreSQL with proper connection
+        # Wait for PostgreSQL with direct docker exec
         echo "Checking PostgreSQL connection..."
-        timeout 60 bash -c 'until ./vendor/bin/sail exec pgsql pg_isready -h localhost -U postgres; do echo "Waiting for PostgreSQL..."; sleep 3; done'
+        timeout 60 bash -c 'until docker exec $(docker compose ps -q pgsql) pg_isready -h localhost -U postgres; do echo "Waiting for PostgreSQL..."; sleep 3; done'
         
-        # Wait for Redis
+        # Wait for Redis with direct docker exec
         echo "Checking Redis connection..."
-        timeout 60 bash -c 'until ./vendor/bin/sail exec redis redis-cli ping; do echo "Waiting for Redis..."; sleep 3; done'
+        timeout 60 bash -c 'until docker exec $(docker compose ps -q redis) redis-cli ping; do echo "Waiting for Redis..."; sleep 3; done'
         
         # Wait for Laravel application
         echo "Checking Laravel application..."
-        timeout 120 bash -c 'until curl -f http://localhost/api/health; do echo "Waiting for Laravel..."; sleep 5; done'
+        timeout 120 bash -c 'until curl -f http://localhost:8000/api/health; do echo "Waiting for Laravel..."; sleep 5; done'
 
     - name: Run Database Migrations
       run: |
         cd backend
-        ./vendor/bin/sail artisan migrate --force --seed
+        # Use direct docker exec instead of sail artisan due to service name mismatch
+        docker exec $(docker compose ps -q backend) php artisan migrate --force --seed
 
     - name: Run Laravel Integration Tests
       run: |
         cd backend
-        ./vendor/bin/sail test tests/Feature/
+        # Use direct docker exec for tests as well
+        docker exec $(docker compose ps -q backend) ./vendor/bin/pest tests/Feature/
 
     - name: Test API Health Endpoint
       run: |
-        response=$(curl -s http://localhost/api/health)
+        response=$(curl -s http://localhost:8000/api/health)
         echo "API Health Response: $response"
         # Verify JSON structure
         echo "$response" | jq '.status' | grep -E '"ok"|"error"'
 
-    - name: Check Sail Logs on Failure
+    - name: Check Service Logs on Failure
       if: failure()
       run: |
         cd backend
         echo "=== Service Status ==="
-        ./vendor/bin/sail ps
+        docker compose ps
         echo "=== Laravel Backend Logs ==="
-        ./vendor/bin/sail logs backend --tail=50
+        docker compose logs backend --tail=50
         echo "=== PostgreSQL Logs ==="
-        ./vendor/bin/sail logs pgsql --tail=20
+        docker compose logs pgsql --tail=20
         echo "=== Redis Logs ==="
-        ./vendor/bin/sail logs redis --tail=20
+        docker compose logs redis --tail=20
 
     - name: Clean up
       if: always()
       run: |
         cd backend
-        ./vendor/bin/sail down -v
+        docker compose down -v
 
   api-contract-tests:
     name: API Contract Validation

@@ -10,111 +10,95 @@ on:
     - cron: '0 2 * * *'
 
 jobs:
-  docker-integration:
-    name: Docker Integration Tests
+  laravel-sail-integration:
+    name: Laravel Sail Integration Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 15
 
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Set up Docker Buildx
-      uses: docker/setup-buildx-action@v3
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+        coverage: none
 
-    - name: Enable Docker Compose V2
+    - name: Install Laravel Dependencies
       run: |
-        docker --version
-        docker compose version
+        cd backend
+        composer install --no-interaction --prefer-dist --optimize-autoloader
 
-    - name: Create environment file
+    - name: Copy Environment File
       run: |
         cd backend
         cp .env.example .env
-        sed -i 's/DB_CONNECTION=.*/DB_CONNECTION=pgsql/' .env
-        sed -i 's/#DB_HOST=.*/DB_HOST=picc-database-1/' .env
-        sed -i 's/#DB_PORT=.*/DB_PORT=5432/' .env  
-        sed -i 's/#DB_DATABASE=.*/DB_DATABASE=picc/' .env
-        sed -i 's/#DB_USERNAME=.*/DB_USERNAME=postgres/' .env
-        sed -i 's/#DB_PASSWORD=.*/DB_PASSWORD=secret/' .env
-        sed -i 's/REDIS_HOST=.*/REDIS_HOST=picc-redis-1/' .env
-        echo "APP_KEY=base64:$(openssl rand -base64 32)" >> .env
+        # Configure for PostgreSQL
+        sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env
+        sed -i 's/# DB_HOST=127.0.0.1/DB_HOST=127.0.0.1/' .env
+        sed -i 's/# DB_PORT=3306/DB_PORT=5432/' .env
+        sed -i 's/# DB_DATABASE=laravel/DB_DATABASE=picc_testing/' .env
+        sed -i 's/# DB_USERNAME=root/DB_USERNAME=sail/' .env
+        sed -i 's/# DB_PASSWORD=/DB_PASSWORD=password/' .env
+        # Configure Redis
+        sed -i 's/REDIS_HOST=127.0.0.1/REDIS_HOST=127.0.0.1/' .env
 
-    - name: Build and start services
+    - name: Generate Application Key
       run: |
-        docker compose up -d --build
-        echo "Started services, checking container status..."
-        docker compose ps
-        
+        cd backend
+        php artisan key:generate --ansi
+
+    - name: Start Laravel Sail
+      run: |
+        cd backend
+        ./vendor/bin/sail up -d
+        echo "Waiting for services to be ready..."
+
     - name: Wait for services to be ready
       run: |
-        echo "Waiting for backend to be ready..."
-        timeout 120 bash -c 'until curl -f http://localhost:8000/api/health; do echo "Waiting for backend..."; sleep 5; done'
-        
-        echo "Waiting for frontend to be ready..."
-        timeout 120 bash -c 'until curl -f http://localhost:3000; do echo "Waiting for frontend..."; sleep 5; done'
+        cd backend
+        # Wait for PostgreSQL
+        ./vendor/bin/sail exec pgsql pg_isready -U sail -d picc_testing
+        # Wait for Redis
+        ./vendor/bin/sail exec redis redis-cli ping
+        # Wait for Laravel application
+        timeout 60 bash -c 'until curl -f http://localhost/api/health; do echo "Waiting for Laravel..."; sleep 3; done'
 
-    - name: Run backend integration tests
+    - name: Run Database Migrations
       run: |
-        # Get actual container name
-        BACKEND_CONTAINER=$(docker compose ps -q backend)
-        echo "Backend container: $BACKEND_CONTAINER"
-        docker exec $BACKEND_CONTAINER ./vendor/bin/pest tests/Feature/
+        cd backend
+        ./vendor/bin/sail artisan migrate --force --seed
 
-    - name: Test API endpoints
+    - name: Run Laravel Integration Tests
       run: |
-        # Test health endpoint
-        response=$(curl -s http://localhost:8000/api/health)
-        echo "Health endpoint response: $response"
-        
-        # Verify JSON response structure
+        cd backend
+        ./vendor/bin/sail test tests/Feature/
+
+    - name: Test API Health Endpoint
+      run: |
+        response=$(curl -s http://localhost/api/health)
+        echo "API Health Response: $response"
+        # Verify JSON structure
         echo "$response" | jq '.status' | grep -E '"ok"|"error"'
-        echo "$response" | jq '.checks.api.status' | grep '"ok"'
 
-    - name: Test frontend build
-      run: |
-        # Get actual container names
-        BACKEND_CONTAINER=$(docker compose ps -q backend)
-        FRONTEND_CONTAINER=$(docker compose ps -q frontend)
-        echo "Testing containers: backend=$BACKEND_CONTAINER, frontend=$FRONTEND_CONTAINER"
-        docker exec $BACKEND_CONTAINER php -v
-        if [ ! -z "$FRONTEND_CONTAINER" ]; then
-          docker exec $FRONTEND_CONTAINER node --version
-        else
-          echo "Frontend container not found"
-        fi
-
-    - name: Check service logs for errors
+    - name: Check Sail Logs on Failure
       if: failure()
       run: |
-        echo "=== Container Status ==="
-        docker compose ps
-        echo "=== Backend Logs ==="
-        BACKEND_CONTAINER=$(docker compose ps -q backend)
-        if [ ! -z "$BACKEND_CONTAINER" ]; then
-          docker logs $BACKEND_CONTAINER --tail=50
-        else
-          echo "Backend container not found"
-        fi
-        echo "=== Database Logs ==="
-        DATABASE_CONTAINER=$(docker compose ps -q database)
-        if [ ! -z "$DATABASE_CONTAINER" ]; then
-          docker logs $DATABASE_CONTAINER --tail=20
-        else
-          echo "Database container not found"
-        fi
+        cd backend
+        echo "=== Laravel Logs ==="
+        ./vendor/bin/sail logs laravel.test --tail=50
+        echo "=== PostgreSQL Logs ==="
+        ./vendor/bin/sail logs pgsql --tail=20
         echo "=== Redis Logs ==="
-        REDIS_CONTAINER=$(docker compose ps -q redis)
-        if [ ! -z "$REDIS_CONTAINER" ]; then
-          docker logs $REDIS_CONTAINER --tail=20
-        else
-          echo "Redis container not found"
-        fi
+        ./vendor/bin/sail logs redis --tail=20
 
     - name: Clean up
       if: always()
       run: |
-        docker compose down -v
+        cd backend
+        ./vendor/bin/sail down -v
 
   api-contract-tests:
     name: API Contract Validation

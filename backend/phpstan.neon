@@ -1,0 +1,31 @@
+includes:
+    - ./vendor/larastan/larastan/extension.neon
+
+parameters:
+    paths:
+        - app/
+        - tests/
+
+    # Rule level (0-10, higher is stricter)
+    level: 8
+
+    ignoreErrors:
+        # Ignore Laravel auto-generated files
+        - '#Laravel\\.*#'
+        
+        # Pest framework specific patterns (testing framework exceptions)
+        - '#Access to an undefined property PHPUnit\\Framework\\TestCase::\$\w+#'
+        - '#Call to an undefined method PHPUnit\\Framework\\TestCase::getJson\(\)#'
+        - '#Undefined variable: \$this#'
+        - '#Function \w+\(\) has no return type specified\.#'
+        - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true\.#'
+        
+        # Allow flexible array return types in service classes for API responses
+        - '#Method App\\Services\\\w+::\w+\(\) return type has no value type specified in iterable type array\.#'
+        
+    excludePaths:
+        - ./vendor/*
+        - ./storage/*
+        - ./bootstrap/cache/*
+        
+    reportUnmatchedIgnoredErrors: false

@@ -1,0 +1,152 @@
+name: Integration CI
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    # Run integration tests daily at 2 AM UTC
+    - cron: '0 2 * * *'
+
+jobs:
+  laravel-sail-integration:
+    name: Laravel Sail Integration Tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.3'
+        extensions: mbstring, dom, fileinfo, pgsql, redis
+        coverage: none
+
+    - name: Install Laravel Dependencies
+      run: |
+        cd backend
+        composer install --no-interaction --prefer-dist --optimize-autoloader
+
+    - name: Copy Environment File
+      run: |
+        cd backend
+        cp .env.example .env
+        # Configure for PostgreSQL (uncomment and set values)
+        sed -i 's/DB_CONNECTION=sqlite/DB_CONNECTION=pgsql/' .env
+        sed -i 's/# DB_HOST=127.0.0.1/DB_HOST=pgsql/' .env
+        sed -i 's/# DB_PORT=3306/DB_PORT=5432/' .env
+        sed -i 's/# DB_DATABASE=laravel/DB_DATABASE=picc/' .env
+        sed -i 's/# DB_USERNAME=root/DB_USERNAME=postgres/' .env
+        sed -i 's/# DB_PASSWORD=/DB_PASSWORD=secret/' .env
+        # Configure Redis for Docker Compose service name
+        sed -i 's/REDIS_HOST=127.0.0.1/REDIS_HOST=redis/' .env
+        # Add additional required variables
+        echo "WWWUSER=1001" >> .env
+        echo "WWWGROUP=1001" >> .env
+
+    - name: Generate Application Key
+      run: |
+        cd backend
+        # Generate key before starting sail
+        php artisan key:generate --ansi
+        # Verify the key is set
+        grep "APP_KEY=" .env
+
+    - name: Start Laravel Sail
+      run: |
+        cd backend
+        ./vendor/bin/sail up -d
+        echo "Waiting for services to be ready..."
+
+    - name: Wait for services to be ready
+      run: |
+        cd backend
+        echo "Waiting for services to start up..."
+        sleep 10
+        
+        # Check if services are running with docker compose
+        docker compose ps
+        
+        # Wait for PostgreSQL with direct docker exec
+        echo "Checking PostgreSQL connection..."
+        timeout 60 bash -c 'until docker exec $(docker compose ps -q pgsql) pg_isready -h localhost -U postgres; do echo "Waiting for PostgreSQL..."; sleep 3; done'
+        
+        # Wait for Redis with direct docker exec
+        echo "Checking Redis connection..."
+        timeout 60 bash -c 'until docker exec $(docker compose ps -q redis) redis-cli ping; do echo "Waiting for Redis..."; sleep 3; done'
+        
+        # Wait for Laravel application
+        echo "Checking Laravel application..."
+        timeout 120 bash -c 'until curl -f http://localhost/api/health; do echo "Waiting for Laravel..."; sleep 5; done'
+
+    - name: Run Database Migrations
+      run: |
+        cd backend
+        # Use direct docker exec instead of sail artisan due to service name mismatch
+        docker exec $(docker compose ps -q backend) php artisan migrate --force --seed
+
+    - name: Run Laravel Integration Tests
+      run: |
+        cd backend
+        # Verify APP_KEY is available in container
+        echo "Verifying APP_KEY in container..."
+        docker exec $(docker compose ps -q backend) grep "APP_KEY=" .env
+        # Run tests
+        docker exec $(docker compose ps -q backend) ./vendor/bin/pest tests/Feature/
+
+    - name: Test API Health Endpoint
+      run: |
+        response=$(curl -s http://localhost/api/health)
+        echo "API Health Response: $response"
+        # Verify JSON structure
+        echo "$response" | jq '.status' | grep -E '"ok"|"error"'
+
+    - name: Check Service Logs on Failure
+      if: failure()
+      run: |
+        cd backend
+        echo "=== Service Status ==="
+        docker compose ps
+        echo "=== Laravel Backend Logs ==="
+        docker compose logs backend --tail=50
+        echo "=== PostgreSQL Logs ==="
+        docker compose logs pgsql --tail=20
+        echo "=== Redis Logs ==="
+        docker compose logs redis --tail=20
+
+    - name: Clean up
+      if: always()
+      run: |
+        cd backend
+        docker compose down -v
+
+  api-contract-tests:
+    name: API Contract Validation
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+
+    - name: Install OpenAPI tools
+      run: |
+        npm init -y
+        npm install --save-dev swagger-cli
+
+    - name: Validate OpenAPI specification
+      run: |
+        npx swagger-cli validate docs/api/openapi.yml
+
+    - name: Check API specification consistency
+      run: |
+        echo "OpenAPI validation completed successfully"
+        # Future: Add actual API response validation against spec

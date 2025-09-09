@@ -78,7 +78,7 @@ jobs:
         
         # Wait for Laravel application
         echo "Checking Laravel application..."
-        timeout 120 bash -c 'until curl -f http://localhost:8000/api/health; do echo "Waiting for Laravel..."; sleep 5; done'
+        timeout 120 bash -c 'until curl -f http://localhost/api/health; do echo "Waiting for Laravel..."; sleep 5; done'
 
     - name: Run Database Migrations
       run: |
@@ -94,7 +94,7 @@ jobs:
 
     - name: Test API Health Endpoint
       run: |
-        response=$(curl -s http://localhost:8000/api/health)
+        response=$(curl -s http://localhost/api/health)
         echo "API Health Response: $response"
         # Verify JSON structure
         echo "$response" | jq '.status' | grep -E '"ok"|"error"'

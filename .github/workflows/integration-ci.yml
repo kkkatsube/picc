@@ -51,7 +51,10 @@ jobs:
     - name: Generate Application Key
       run: |
         cd backend
+        # Generate key before starting sail
         php artisan key:generate --ansi
+        # Verify the key is set
+        grep "APP_KEY=" .env
 
     - name: Start Laravel Sail
       run: |
@@ -89,7 +92,10 @@ jobs:
     - name: Run Laravel Integration Tests
       run: |
         cd backend
-        # Use direct docker exec for tests as well
+        # Verify APP_KEY is available in container
+        echo "Verifying APP_KEY in container..."
+        docker exec $(docker compose ps -q backend) grep "APP_KEY=" .env
+        # Run tests
         docker exec $(docker compose ps -q backend) ./vendor/bin/pest tests/Feature/
 
     - name: Test API Health Endpoint

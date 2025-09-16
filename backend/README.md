@@ -1,66 +1,106 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PICC Backend (Laravel API)
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+PHP 8.3 + Laravel 11 による RESTful API サーバー
 
-## About Laravel
+## 🛠️ 技術スタック
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **PHP**: 8.3
+- **フレームワーク**: Laravel 11
+- **データベース**: PostgreSQL 15
+- **キャッシュ**: Redis
+- **認証**: Laravel Sanctum
+- **テスト**: Pest v4 + PHPUnit
+- **静的解析**: PHPStan Level 8 + Larastan
+- **コードフォーマット**: Laravel Pint
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## 🚀 セットアップ
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+### Docker環境（推奨）
+```bash
+# ルートディレクトリから統合環境起動
+cd .. && docker-compose up -d
 
-## Learning Laravel
+# コンテナ内でのコマンド実行
+docker exec picc-backend-1 php artisan migrate
+docker exec picc-backend-1 composer install
+```
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+### 開発コマンド
+```bash
+# テスト実行
+./vendor/bin/pest
+./vendor/bin/phpunit
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+# 静的解析
+./vendor/bin/phpstan analyse
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+# コードフォーマット
+./vendor/bin/pint
 
-## Laravel Sponsors
+# マイグレーション
+php artisan migrate
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# ヘルスチェック
+curl http://localhost:8000/api/health
+```
 
-### Premium Partners
+## 🔧 API エンドポイント
 
-- **[Vehikl](https://vehikl.com/)**
-- **[Tighten Co.](https://tighten.co)**
-- **[WebReinvent](https://webreinvent.com/)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel/)**
-- **[Cyber-Duck](https://cyber-duck.co.uk)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Jump24](https://jump24.co.uk)**
-- **[Redberry](https://redberry.international/laravel/)**
-- **[Active Logic](https://activelogic.com)**
-- **[byte5](https://byte5.de)**
-- **[OP.GG](https://op.gg)**
+### ヘルスチェック
+- **GET** `/api/health` - システム状態確認
+  - データベース接続確認
+  - Redis接続確認
+  - パフォーマンス測定
 
-## Contributing
+### 認証（予定）
+- **POST** `/api/auth/register` - ユーザー登録
+- **POST** `/api/auth/login` - ログイン
+- **POST** `/api/auth/logout` - ログアウト
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## 📊 テスト・品質管理
 
-## Code of Conduct
+### テスト構成
+- **Unit Tests**: `tests/Unit/` - サービス・ユーティリティクラス
+- **Feature Tests**: `tests/Feature/` - HTTP API エンドポイント
+- **カバレッジ**: GitHub Actions CI で自動測定
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+### コード品質
+- **PHPStan Level 8**: 最高レベルの静的解析
+- **Laravel Pint**: PSR-12準拠コードフォーマット
+- **GitHub Actions**: PR時の自動品質チェック
 
-## Security Vulnerabilities
+## 🔒 セキュリティ
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+### 現在の設定
+- **APP_KEY**: 開発環境用（本番では要変更）
+- **DB認証**: 開発環境デフォルト値
+- **Redis**: パスワードなし設定
 
-## License
+### 実装予定
+- [ ] Laravel Sanctum認証システム
+- [ ] 本番環境用シークレット管理
+- [ ] セキュリティヘッダー設定
+- [ ] レート制限設定
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## 📁 ディレクトリ構成
+
+```
+backend/
+├── app/
+│   ├── Http/Controllers/     # API コントローラー
+│   ├── Services/            # ビジネスロジック
+│   └── Models/              # Eloquent モデル
+├── tests/
+│   ├── Unit/               # 単体テスト
+│   └── Feature/            # 機能テスト
+├── config/                 # 設定ファイル
+└── database/
+    ├── migrations/         # DBマイグレーション
+    └── seeders/           # テストデータ
+```
+
+## 🔗 関連ドキュメント
+
+- [プロジェクトルート README](../README.md)
+- [API仕様書](../docs/api/openapi.yml)
+- [システム構成](../docs/architecture.md)

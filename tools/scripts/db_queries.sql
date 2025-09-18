@@ -1,5 +1,5 @@
 -- PICC Database Queries
--- Usage: docker exec -i picc-pgsql-1 psql -U sail -d picc < scripts/db_queries.sql
+-- Usage: docker exec -i picc-pgsql-1 psql -U sail -d picc < tools/scripts/db_queries.sql
 
 -- 基本情報
 \echo '=== Database Information ==='

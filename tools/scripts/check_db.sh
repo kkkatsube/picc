@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PICC Database Check Script
-# Usage: ./scripts/check_db.sh
+# Usage: ./tools/scripts/check_db.sh
 
 echo "🗄️  PICC Database Check"
 echo "======================"
@@ -51,7 +51,7 @@ case $choice in
         ;;
     4)
         echo -e "\n💻 Running comprehensive SQL report..."
-        docker exec -i picc-pgsql-1 psql -U sail -d picc < scripts/db_queries.sql
+        docker exec -i picc-pgsql-1 psql -U sail -d picc < tools/scripts/db_queries.sql
         ;;
     5)
         echo -e "\n💻 Opening PostgreSQL console..."

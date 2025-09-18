@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # PICC API Testing Script
-# Usage: ./scripts/test_api.sh
+# Usage: ./tools/scripts/test_api.sh
 
 BASE_URL="http://localhost:8000/api"
 EMAIL="test@example.com"

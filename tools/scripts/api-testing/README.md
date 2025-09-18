@@ -21,7 +21,7 @@ VS Code REST Client用のAPIテストファイル集
 ### 2. ファイルを開いてテスト実行
 ```bash
 # 推奨: 堅牢版を使用
-code scripts/api-testing/api_test_robust.http
+code tools/scripts/api-testing/api_test_robust.http
 ```
 
 ### 3. 実行順序

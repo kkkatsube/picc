@@ -1,0 +1,60 @@
+### PICC API Testing
+### VS Code REST Client format
+
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+### Health Check
+GET {{baseUrl}}/health
+
+### Register User
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+### Login
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com", 
+  "password": "password123"
+}
+
+### Extract token from login response
+@token = {{login.response.body.access_token}}
+
+### Get Current User (requires login first)
+GET {{baseUrl}}/auth/user
+Authorization: Bearer {{token}}
+
+### Logout
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### Test Invalid Login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "wrongpassword"
+}
+
+### Test Registration Validation
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "password": "123"
+}

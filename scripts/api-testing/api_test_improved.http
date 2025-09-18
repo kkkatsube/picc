@@ -1,0 +1,112 @@
+### 🚀 PICC API Testing - Improved Version
+### Step-by-step API testing with clear instructions
+
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+###############################################
+### 📋 STEP 1: Health Check (Always start here)
+###############################################
+GET {{baseUrl}}/health
+# Expected: 200 OK with system status
+
+
+###############################################
+### 👤 STEP 2A: Register New User (Try this first)
+###############################################
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Test User",
+  "email": "test@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+# Expected: 201 Created with user data and token
+# If you get 422 error (email already exists), use STEP 2B instead
+
+
+###############################################
+### 🔐 STEP 2B: Login Existing User (If registration failed)
+###############################################
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com", 
+  "password": "password123"
+}
+# Expected: 200 OK with user data and token
+
+
+###############################################
+### 📝 Extract Token (Automatic - no action needed)
+###############################################
+@token = {{login.response.body.access_token}}
+# Fallback if registration failed:
+# @token = {{login.response.body.access_token}}
+
+
+###############################################
+### 🔍 STEP 3: Get Current User Info (Protected Route)
+###############################################
+GET {{baseUrl}}/auth/user
+Authorization: Bearer {{token}}
+# Expected: 200 OK with user information
+# If you get 401 error, run STEP 2A or 2B first to get a token
+
+
+###############################################
+### 👋 STEP 4: Logout User
+###############################################
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+# Expected: 200 OK with logout message
+
+
+###############################################
+### ❌ STEP 5: Test Error Cases
+###############################################
+
+### Test invalid credentials
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com",
+  "password": "wrongpassword"
+}
+# Expected: 422 Validation Error
+
+### Test protected route without token
+GET {{baseUrl}}/auth/user
+# Expected: 401 Unauthorized
+
+### Test registration validation
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "",
+  "email": "invalid-email",
+  "password": "123"
+}
+# Expected: 422 Validation Error
+
+
+###############################################
+### 🧪 STEP 6: Create Another User (Optional)
+###############################################
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Another User",
+  "email": "another@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+# Expected: 201 Created

@@ -1,0 +1,82 @@
+### 🔍 Status Code Testing - PICC Authentication API
+### Test specific status code scenarios
+
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+###############################################
+### 1. Valid Authentication Flow
+###############################################
+
+### Fresh registration
+# @name fresh_register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "StatusTest User",
+  "email": "statustest@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+### Get valid token
+@validToken = {{fresh_register.response.body.access_token}}
+
+### Test protected route with valid token
+GET {{baseUrl}}/auth/user
+Authorization: Bearer {{validToken}}
+
+###############################################
+### 2. Duplicate Email Test (Should be 422)
+###############################################
+
+### Try to register same email again
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Duplicate User",
+  "email": "statustest@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+###############################################
+### 3. Invalid Token Tests (Should be 401)
+###############################################
+
+### Test with completely invalid token
+GET {{baseUrl}}/auth/user
+Authorization: Bearer invalid_token_here
+
+### Test with malformed token
+GET {{baseUrl}}/auth/user
+Authorization: Bearer malformed.token.format
+
+### Test logout with invalid token
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer invalid_token_here
+
+###############################################
+### 4. No Token Tests (Should be 401)
+###############################################
+
+### Test protected route without Authorization header
+GET {{baseUrl}}/auth/user
+
+### Test logout without Authorization header
+POST {{baseUrl}}/auth/logout
+
+###############################################
+### 5. Invalid Login Credentials (Should be 422)
+###############################################
+
+### Test login with wrong password
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "statustest@example.com",
+  "password": "wrongpassword"
+}

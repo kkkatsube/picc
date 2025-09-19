@@ -1,11 +1,7 @@
 <?php
 
 use App\Models\User;
-use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
-use Tests\TestCase;
-
-uses(TestCase::class, RefreshDatabase::class);
 
 describe('Authentication API', function () {
     describe('POST /auth/register', function () {

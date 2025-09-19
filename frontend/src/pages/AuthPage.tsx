@@ -3,14 +3,14 @@ import LoginForm from '../components/auth/LoginForm';
 import RegisterForm from '../components/auth/RegisterForm';
 import { useAuthStore } from '../stores/authStore';
 import { AuthService, type AuthError } from '../services/authService';
-import { LoginForm as LoginFormType, RegisterForm as RegisterFormType } from '../components/auth/schemas';
+import { LoginForm as LoginFormData, RegisterForm as RegisterFormData } from '../components/auth/schemas';
 
 export default function AuthPage() {
   const [isLogin, setIsLogin] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const { setAuth, setLoading, isLoading } = useAuthStore();
 
-  const handleLogin = async (data: LoginFormType) => {
+  const handleLogin = async (data: LoginFormData) => {
     setLoading(true);
     setError(null);
     
@@ -34,7 +34,7 @@ export default function AuthPage() {
     }
   };
 
-  const handleRegister = async (data: RegisterFormType) => {
+  const handleRegister = async (data: RegisterFormData) => {
     setLoading(true);
     setError(null);
     

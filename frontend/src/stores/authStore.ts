@@ -22,9 +22,9 @@ interface AuthState {
 
 // 認証アクションの型定義
 interface AuthActions {
-  setAuth: (user: User, token: string) => void;
+  setAuth: (_user: User, _token: string) => void;
   clearAuth: () => void;
-  setLoading: (loading: boolean) => void;
+  setLoading: (_loading: boolean) => void;
 }
 
 // Zustand ストア作成

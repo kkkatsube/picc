@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { registerSchema, type RegisterForm } from './schemas';
+import { registerSchema, type RegisterForm as RegisterFormData } from './schemas';
 
 interface RegisterFormProps {
-  onSubmit: (data: RegisterForm) => Promise<void>;
+  onSubmit: (_data: RegisterFormData) => Promise<void>;
   onSwitchToLogin: () => void;
   isLoading?: boolean;
 }
@@ -18,7 +18,7 @@ export default function RegisterForm({ onSubmit, onSwitchToLogin, isLoading = fa
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<RegisterForm>({
+  } = useForm<RegisterFormData>({
     resolver: zodResolver(registerSchema),
   });
 

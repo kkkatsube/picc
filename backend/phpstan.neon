@@ -16,6 +16,8 @@ parameters:
         # Pest framework specific patterns (testing framework exceptions)
         - '#Access to an undefined property PHPUnit\\Framework\\TestCase::\$\w+#'
         - '#Call to an undefined method PHPUnit\\Framework\\TestCase::getJson\(\)#'
+        - '#Call to an undefined method PHPUnit\\Framework\\TestCase::postJson\(\)#'
+        - '#Call to an undefined method PHPUnit\\Framework\\TestCase::assertDatabaseHas\(\)#'
         - '#Undefined variable: \$this#'
         - '#Function \w+\(\) has no return type specified\.#'
         - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true\.#'

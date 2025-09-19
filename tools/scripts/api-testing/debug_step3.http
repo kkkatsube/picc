@@ -1,0 +1,39 @@
+### 🔍 STEP 3 Debug Version
+### Simplified debugging for token issues
+
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+###############################################
+### 🧪 Debug 1: Check if you have a token
+###############################################
+# First, let's get a fresh token
+# @name login_debug
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "test@example.com", 
+  "password": "password123"
+}
+
+###############################################
+### 🧪 Debug 2: Extract and verify token
+###############################################
+@token_debug = {{login_debug.response.body.access_token}}
+
+### Manual token test (copy the token from above and paste it here)
+GET {{baseUrl}}/auth/user
+Authorization: Bearer YOUR_TOKEN_HERE
+
+###############################################
+### 🧪 Debug 3: Test without any token
+###############################################
+GET {{baseUrl}}/auth/user
+# This should return 401 - if it doesn't, there's a middleware issue
+
+###############################################
+### 🧪 Debug 4: Test with dynamic token
+###############################################
+GET {{baseUrl}}/auth/user
+Authorization: Bearer {{token_debug}}

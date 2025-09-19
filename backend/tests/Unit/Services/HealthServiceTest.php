@@ -3,19 +3,18 @@
 use App\Services\HealthService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Redis;
-use Mockery;
 use Tests\TestCase;
 
 uses(TestCase::class);
 
 beforeEach(function () {
     // Clear any existing mocks
-    Mockery::close();
+    \Mockery::close();
     $this->service = new HealthService;
 });
 
 afterEach(function () {
-    Mockery::close();
+    \Mockery::close();
 });
 
 describe('HealthService', function () {
@@ -27,7 +26,7 @@ describe('HealthService', function () {
                 ->andReturnSelf();
             DB::shouldReceive('getPdo')
                 ->once()
-                ->andReturn(Mockery::mock('PDO'));
+                ->andReturn(\Mockery::mock('PDO'));
 
             // Mock Redis connection
             Redis::shouldReceive('ping')
@@ -83,7 +82,7 @@ describe('HealthService', function () {
                 ->andReturnSelf();
             DB::shouldReceive('getPdo')
                 ->once()
-                ->andReturn(Mockery::mock('PDO'));
+                ->andReturn(\Mockery::mock('PDO'));
 
             // Mock Redis connection failure
             Redis::shouldReceive('ping')
@@ -126,7 +125,7 @@ describe('HealthService', function () {
                 ->andReturnSelf();
             DB::shouldReceive('getPdo')
                 ->once()
-                ->andReturn(Mockery::mock('PDO'));
+                ->andReturn(\Mockery::mock('PDO'));
 
             Redis::shouldReceive('ping')
                 ->once()

@@ -36,6 +36,8 @@ Thumbs.db
 *.log
 logs/
 debug/
+core
+core.*
 
 # Testing
 coverage/

@@ -64,13 +64,10 @@ class AuthController extends Controller
      */
     public function logout(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = $request->user();
-        if ($user) {
-            $token = $user->currentAccessToken();
-            if ($token) {
-                $token->delete();
-            }
-        }
+        $token = $user->currentAccessToken();
+        $token?->delete();
 
         return response()->json([
             'message' => 'Successfully logged out',
@@ -82,13 +79,8 @@ class AuthController extends Controller
      */
     public function user(Request $request): JsonResponse
     {
+        /** @var \App\Models\User $user */
         $user = $request->user();
-
-        if (! $user) {
-            return response()->json([
-                'message' => 'Unauthenticated.',
-            ], 401);
-        }
 
         return response()->json([
             'data' => $user,

@@ -131,6 +131,56 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /counter:
+    get:
+      summary: Get User Counter
+      description: ユーザーカウンター値取得
+      operationId: getUserCounterValue
+      tags:
+        - Counter
+      security:
+        - sanctumAuth: []
+      responses:
+        '200':
+          description: Current user counter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCounterResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Put User Counter
+      description: ユーザーカウンター値更新
+      operationId: updateUserCounterValue
+      tags:
+        - Counter
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateCounterRequest'
+      responses:
+        '200':
+          description: Updated counter
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserCounterResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
 components:
   securitySchemes:
     sanctumAuth:
@@ -298,6 +348,24 @@ components:
           $ref: '#/components/schemas/User'
       required:
         - data
+
+    UpdateCounterRequest:
+      type: object
+      properties:
+        value:
+          type: integer
+          example: 1
+      required:
+        - value
+
+    UserCounterResponse:
+      type: object
+      properties:
+        value:
+          type: integer
+          example: 1
+      required:
+        - value
 
     MessageResponse:
       type: object

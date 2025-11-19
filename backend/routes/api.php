@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CounterController;
 use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
 
@@ -28,4 +29,10 @@ Route::prefix('auth')->group(function () {
         Route::post('/logout', [AuthController::class, 'logout']);
         Route::get('/user', [AuthController::class, 'user']);
     });
+});
+
+// Counter Routes (Protected)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/counter', [CounterController::class, 'show']);
+    Route::put('/counter', [CounterController::class, 'update']);
 });

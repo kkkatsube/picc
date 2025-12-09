@@ -50,6 +50,8 @@ class User extends Authenticatable
 
     /**
      * Get the counter associated with the user.
+     *
+     * @return HasOne<Counter, $this>
      */
     public function counter(): HasOne
     {

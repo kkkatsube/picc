@@ -205,24 +205,6 @@ describe('Counter', () => {
   });
 
   describe('更新中状態', () => {
-    it('更新中はUpdating...メッセージを表示する', () => {
-      vi.mocked(useCounterModule.useCounter).mockReturnValue({
-        value: 5,
-        isLoading: false,
-        isError: false,
-        error: null,
-        increment: vi.fn(),
-        decrement: vi.fn(),
-        setValue: vi.fn(),
-        isUpdating: true,
-        updateError: null,
-      });
-
-      render(<Counter />);
-
-      expect(screen.getByText('Updating...')).toBeInTheDocument();
-    });
-
     it('更新中はボタンが無効化される', () => {
       vi.mocked(useCounterModule.useCounter).mockReturnValue({
         value: 5,

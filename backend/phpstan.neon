@@ -12,18 +12,22 @@ parameters:
     ignoreErrors:
         # Ignore Laravel auto-generated files
         - '#Laravel\\.*#'
-        
+
         # Pest framework specific patterns (testing framework exceptions)
         - '#Access to an undefined property PHPUnit\\Framework\\TestCase::\$\w+#'
         - '#Call to an undefined method PHPUnit\\Framework\\TestCase::getJson\(\)#'
         - '#Call to an undefined method PHPUnit\\Framework\\TestCase::postJson\(\)#'
+        - '#Call to an undefined method PHPUnit\\Framework\\TestCase::putJson\(\)#'
         - '#Call to an undefined method PHPUnit\\Framework\\TestCase::assertDatabaseHas\(\)#'
         - '#Undefined variable: \$this#'
         - '#Function \w+\(\) has no return type specified\.#'
         - '#Call to method PHPUnit\\Framework\\Assert::assertTrue\(\) with true will always evaluate to true\.#'
-        
+
         # Allow flexible array return types in service classes for API responses
         - '#Method App\\Services\\\w+::\w+\(\) return type has no value type specified in iterable type array\.#'
+
+        # HasFactory generic type - Factory classes may not exist yet
+        - '#Class App\\Models\\\w+ uses generic trait Illuminate\\Database\\Eloquent\\Factories\\HasFactory but does not specify its types: TFactory#'
         
     excludePaths:
         - ./vendor/*

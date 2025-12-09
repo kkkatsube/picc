@@ -1,0 +1,212 @@
+### PICC Counter API Testing
+### VS Code REST Client format
+### Test user counter functionality (GET/PUT /api/counter)
+
+@baseUrl = http://localhost:8000/api
+@contentType = application/json
+
+### 1. Register Test User for Counter
+# @name register
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Counter Test User",
+  "email": "counter@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+### 2. Login to get token
+# @name login
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "counter@example.com",
+  "password": "password123"
+}
+
+### Extract token from login response
+@token = {{login.response.body.access_token}}
+
+### 3. Get Counter (First time - should return 0 or create with default value 0)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+### 4. Update Counter to 5
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": 5
+}
+
+### 5. Get Counter (Should return 5)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+### 6. Update Counter to 10
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": 10
+}
+
+### 7. Get Counter (Should return 10)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+### 8. Update Counter to negative value
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": -5
+}
+
+### 9. Update Counter to 0
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": 0
+}
+
+### 10. Get Counter (Should return 0)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+###############################################
+### Error Cases / Validation Tests
+###############################################
+
+### 11. Get Counter without authentication (Should return 401)
+GET {{baseUrl}}/counter
+
+### 12. Update Counter without authentication (Should return 401)
+PUT {{baseUrl}}/counter
+Content-Type: {{contentType}}
+
+{
+  "value": 10
+}
+
+### 13. Update Counter with invalid value (string instead of integer - Should return 422)
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": "not a number"
+}
+
+### 14. Update Counter with missing value field (Should return 422)
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+}
+
+### 15. Update Counter with null value (Should return 422)
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": null
+}
+
+### 16. Update Counter with float value (Should accept as integer)
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+Content-Type: {{contentType}}
+
+{
+  "value": 3.14
+}
+
+### 17. Get Counter after float update (Check how it's stored)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+###############################################
+### Multi-User Test Scenario
+###############################################
+
+### 18. Register Second User
+# @name register2
+POST {{baseUrl}}/auth/register
+Content-Type: {{contentType}}
+
+{
+  "name": "Counter Test User 2",
+  "email": "counter2@example.com",
+  "password": "password123",
+  "password_confirmation": "password123"
+}
+
+### 19. Login as Second User
+# @name login2
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "counter2@example.com",
+  "password": "password123"
+}
+
+### Extract token for second user
+@token2 = {{login2.response.body.access_token}}
+
+### 20. Get Counter for Second User (Should be 0, independent from first user)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token2}}
+
+### 21. Update Counter for Second User to 100
+PUT {{baseUrl}}/counter
+Authorization: Bearer {{token2}}
+Content-Type: {{contentType}}
+
+{
+  "value": 100
+}
+
+### 22. Verify First User's Counter is unchanged
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token}}
+
+### 23. Verify Second User's Counter is 100
+GET {{baseUrl}}/counter
+Authorization: Bearer {{token2}}
+
+###############################################
+### Session Persistence Test
+###############################################
+
+### 24. Logout First User
+POST {{baseUrl}}/auth/logout
+Authorization: Bearer {{token}}
+
+### 25. Login Again as First User
+# @name loginAgain
+POST {{baseUrl}}/auth/login
+Content-Type: {{contentType}}
+
+{
+  "email": "counter@example.com",
+  "password": "password123"
+}
+
+### Extract new token
+@tokenNew = {{loginAgain.response.body.access_token}}
+
+### 26. Get Counter after re-login (Should persist previous value)
+GET {{baseUrl}}/counter
+Authorization: Bearer {{tokenNew}}

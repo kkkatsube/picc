@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Button } from '@headlessui/react';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { loginSchema, type LoginForm as LoginFormData } from './schemas';
 
@@ -90,13 +91,13 @@ export default function LoginForm({ onSubmit, onSwitchToRegister, isLoading = fa
 
             {/* Submit Button */}
             <div>
-              <button
+              <Button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed"
+                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-gray-400 disabled:cursor-not-allowed data-[hover]:bg-blue-600 data-[focus]:ring-2 data-[focus]:ring-blue-500 data-[disabled]:bg-gray-400 data-[disabled]:cursor-not-allowed"
               >
                 {isLoading ? 'Signing in...' : 'Sign In'}
-              </button>
+              </Button>
             </div>
 
             {/* Register Link */}

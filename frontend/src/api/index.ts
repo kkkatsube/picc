@@ -14,9 +14,12 @@ export { HealthResponse } from './models/HealthResponse';
 export type { LoginRequest } from './models/LoginRequest';
 export type { MessageResponse } from './models/MessageResponse';
 export type { RegisterRequest } from './models/RegisterRequest';
+export type { UpdateCounterRequest } from './models/UpdateCounterRequest';
 export type { User } from './models/User';
+export type { UserCounterResponse } from './models/UserCounterResponse';
 export type { UserResponse } from './models/UserResponse';
 export type { ValidationError } from './models/ValidationError';
 
 export { AuthenticationService } from './services/AuthenticationService';
+export { CounterService } from './services/CounterService';
 export { SystemService } from './services/SystemService';

@@ -1,5 +1,6 @@
 import { PlusIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../stores/authStore';
+import { Counter } from '../components/counter';
 
 export default function DashboardPage() {
   const { user, clearAuth } = useAuthStore();
@@ -24,10 +25,16 @@ export default function DashboardPage() {
               <h1 className="text-2xl font-bold text-gray-900">PICC Canvas</h1>
               <p className="text-sm text-gray-600">Dashboard</p>
             </div>
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <div className="text-sm text-gray-700">
                 Welcome, <span className="font-medium">{user?.name}</span>
               </div>
+
+              {/* Counter Component */}
+              <div className="border-l border-gray-300 pl-6">
+                <Counter />
+              </div>
+
               <button
                 onClick={handleLogout}
                 className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"

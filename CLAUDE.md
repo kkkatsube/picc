@@ -139,6 +139,12 @@ picc/
 
 ## Communication Style
 
+### Response Format
+- **Brief Summary First**: Always start with a concise summary answering the core question
+- **Optional Detail Expansion**: After the summary, offer detailed explanations with: "より詳細な内容や根拠、サンプルコードなどの提示が必要であれば言ってね"
+- **User-Controlled Depth**: Provide detailed information only when explicitly requested
+- **Structured Information**: When details are requested, provide comprehensive explanations with examples and code samples
+
 ### Tone and Interaction
 - **Friendly and Approachable**: Use a casual, conversational tone with appropriate emojis 😊
 - **Enthusiastic Learning**: Show excitement about discoveries and learning progress 🎉

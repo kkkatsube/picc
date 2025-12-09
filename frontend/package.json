@@ -17,6 +17,7 @@
     "generate-api": "openapi --input ../docs/api/openapi.yml --output ./src/api --client axios"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.8",
     "@heroicons/react": "^2.0.18",
     "@hookform/resolvers": "^5.2.2",
     "@tanstack/react-query": "^5.0.0",

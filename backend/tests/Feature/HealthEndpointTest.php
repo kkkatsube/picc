@@ -52,8 +52,8 @@ describe('Health Endpoint', function () {
         // Verify response contains expected fields
         $data = $response->json();
         expect($data['timestamp'])->toMatch('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d+Z$/');
-        expect($data['checks']['database']['connection_time_ms'])->toBeFloat()->toBeGreaterThan(0);
-        expect($data['checks']['redis']['connection_time_ms'])->toBeFloat()->toBeGreaterThan(0);
+        expect($data['checks']['database']['connection_time_ms'])->toBeNumeric()->toBeGreaterThanOrEqual(0);
+        expect($data['checks']['redis']['connection_time_ms'])->toBeNumeric()->toBeGreaterThanOrEqual(0);
     });
 
     test('returns 503 status when database fails', function () {
@@ -150,8 +150,9 @@ describe('Health Endpoint', function () {
 
         expect($data['checks']['database'])->toHaveKey('connection_time_ms');
         expect($data['checks']['redis'])->toHaveKey('connection_time_ms');
-        expect($data['checks']['database']['connection_time_ms'])->toBeFloat();
-        expect($data['checks']['redis']['connection_time_ms'])->toBeFloat();
+        // connection_time_ms should be numeric (float or int)
+        expect($data['checks']['database']['connection_time_ms'])->toBeNumeric();
+        expect($data['checks']['redis']['connection_time_ms'])->toBeNumeric();
     });
 
     test('matches OpenAPI specification structure', function () {

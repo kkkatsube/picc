@@ -1,9 +1,11 @@
 import { PlusIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useAuthStore } from '../stores/authStore';
 import { Counter } from '../components/counter';
+import { useCanvases } from '../hooks/useCanvases';
 
 export default function DashboardPage() {
   const { user, clearAuth } = useAuthStore();
+  const { canvases, isLoading, createCanvas, isCreating } = useCanvases();
 
   const handleLogout = () => {
     // TODO: API連携でログアウト処理を実装
@@ -11,8 +13,11 @@ export default function DashboardPage() {
   };
 
   const handleCreateCanvas = () => {
-    // TODO: キャンバス作成機能を実装
-    console.log('Create new canvas');
+    createCanvas({
+      name: 'New Canvas',
+      width: 1920,
+      height: 1080,
+    });
   };
 
   return (
@@ -65,40 +70,56 @@ export default function DashboardPage() {
           {/* Your Canvases Section */}
           <div>
             <h2 className="text-lg font-medium text-gray-900 mb-4">Your Canvases</h2>
-            
-            {/* Empty State */}
-            <div className="text-center py-12">
-              <div className="bg-white rounded-lg shadow p-6">
-                <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
-                  <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={1}
-                      d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
-                    />
-                  </svg>
-                </div>
-                <h3 className="text-lg font-medium text-gray-900 mb-2">No canvases yet</h3>
-                <p className="text-gray-600 mb-4">
-                  Create your first canvas to start building beautiful image compositions.
-                </p>
-                <button
-                  onClick={handleCreateCanvas}
-                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                >
-                  <PlusIcon className="h-4 w-4 mr-2" />
-                  Create Canvas
-                </button>
-              </div>
-            </div>
 
-            {/* Canvas Grid (Future Implementation) */}
-            {/* 
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-              Canvas cards will go here
-            </div>
-            */}
+            {isLoading ? (
+              <div className="text-center py-12">
+                <p className="text-gray-500">Loading canvases...</p>
+              </div>
+            ) : canvases.length === 0 ? (
+              /* Empty State */
+              <div className="text-center py-12">
+                <div className="bg-white rounded-lg shadow p-6">
+                  <div className="mx-auto h-12 w-12 text-gray-400 mb-4">
+                    <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={1}
+                        d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"
+                      />
+                    </svg>
+                  </div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-2">No canvases yet</h3>
+                  <p className="text-gray-600 mb-4">
+                    Create your first canvas to start building beautiful image compositions.
+                  </p>
+                  <button
+                    onClick={handleCreateCanvas}
+                    disabled={isCreating}
+                    className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-500 hover:bg-blue-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+                  >
+                    <PlusIcon className="h-4 w-4 mr-2" />
+                    {isCreating ? 'Creating...' : 'Create Canvas'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              /* Canvas Grid */
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {canvases.map((canvas) => (
+                  <div key={canvas.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                    <h3 className="text-lg font-semibold text-gray-900 mb-2">{canvas.name || 'Untitled Canvas'}</h3>
+                    {canvas.memo && (
+                      <p className="text-sm text-gray-600 mb-4">{canvas.memo}</p>
+                    )}
+                    <div className="flex items-center justify-between text-sm text-gray-500">
+                      <span>{canvas.width} × {canvas.height}</span>
+                      <span>{new Date(canvas.created_at).toLocaleDateString()}</span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       </main>

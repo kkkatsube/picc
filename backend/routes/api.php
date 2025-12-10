@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\AuthController;
+use App\Http\Controllers\CanvasController;
+use App\Http\Controllers\CanvasImageController;
 use App\Http\Controllers\CounterController;
 use App\Http\Controllers\HealthController;
 use Illuminate\Support\Facades\Route;
@@ -35,4 +37,14 @@ Route::prefix('auth')->group(function () {
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/counter', [CounterController::class, 'show']);
     Route::put('/counter', [CounterController::class, 'update']);
+});
+
+// Canvas Routes (Protected)
+Route::middleware('auth:sanctum')->group(function () {
+    Route::apiResource('canvases', CanvasController::class);
+    Route::apiResource('canvases.images', CanvasImageController::class)
+        ->except(['index', 'store'])
+        ->parameter('images', 'id');
+    Route::get('/canvases/{canvasId}/images', [CanvasImageController::class, 'index']);
+    Route::post('/canvases/{canvasId}/images', [CanvasImageController::class, 'store']);
 });

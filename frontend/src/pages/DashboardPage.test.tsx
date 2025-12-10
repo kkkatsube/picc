@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest'
 import DashboardPage from './DashboardPage'
 import { useAuthStore } from '../stores/authStore'
 import * as useCounterModule from '../hooks/useCounter'
+import * as useCanvasesModule from '../hooks/useCanvases'
 
 // Mock the auth store
 vi.mock('../stores/authStore')
@@ -10,6 +11,9 @@ const mockUseAuthStore = vi.mocked(useAuthStore)
 
 // Mock the useCounter hook
 vi.mock('../hooks/useCounter')
+
+// Mock the useCanvases hook
+vi.mock('../hooks/useCanvases')
 
 describe('DashboardPage', () => {
   const mockClearAuth = vi.fn()
@@ -44,6 +48,23 @@ describe('DashboardPage', () => {
       setValue: vi.fn(),
       isUpdating: false,
       updateError: null,
+    })
+
+    // Mock useCanvases to return a stable state
+    vi.mocked(useCanvasesModule.useCanvases).mockReturnValue({
+      canvases: [],
+      isLoading: false,
+      isError: false,
+      error: null,
+      createCanvas: vi.fn(),
+      isCreating: false,
+      createError: null,
+      updateCanvas: vi.fn(),
+      isUpdating: false,
+      updateError: null,
+      deleteCanvas: vi.fn(),
+      isDeleting: false,
+      deleteError: null,
     })
   })
 

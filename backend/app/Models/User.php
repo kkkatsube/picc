@@ -4,6 +4,7 @@ namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
@@ -56,5 +57,15 @@ class User extends Authenticatable
     public function counter(): HasOne
     {
         return $this->hasOne(Counter::class);
+    }
+
+    /**
+     * Get the canvases for the user.
+     *
+     * @return HasMany<Canvas, $this>
+     */
+    public function canvases(): HasMany
+    {
+        return $this->hasMany(Canvas::class);
     }
 }

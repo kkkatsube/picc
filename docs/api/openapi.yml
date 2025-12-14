@@ -929,49 +929,15 @@ components:
 
     CreateCanvasImageRequest:
       type: object
-      properties:
-        uri:
-          type: string
-          example: "https://example.com/image.jpg"
-        x:
-          type: integer
-          nullable: true
-          example: 100
-        y:
-          type: integer
-          nullable: true
-          example: 200
-        width:
-          type: integer
-          nullable: true
-          example: 300
-        height:
-          type: integer
-          nullable: true
-          example: 400
-        left:
-          type: integer
-          nullable: true
-          example: 10
-        right:
-          type: integer
-          nullable: true
-          example: 20
-        top:
-          type: integer
-          nullable: true
-          example: 30
-        bottom:
-          type: integer
-          nullable: true
-          example: 40
-        size:
-          type: number
-          format: float
-          nullable: true
-          example: 1.5
       required:
-        - uri
+        - add_picture_url
+      properties:
+        add_picture_url:
+          type: string
+          format: uri
+          pattern: '^https://'
+          example: "https://example.com/image.jpg"
+          description: HTTPS URL of the image to add (server will fetch dimensions automatically)
 
     UpdateCanvasImageRequest:
       type: object

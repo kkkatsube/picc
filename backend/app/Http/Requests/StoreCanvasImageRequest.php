@@ -19,16 +19,7 @@ class StoreCanvasImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'uri' => 'required|string|max:2048',
-            'x' => 'nullable|integer',
-            'y' => 'nullable|integer',
-            'width' => 'nullable|integer|min:1',
-            'height' => 'nullable|integer|min:1',
-            'left' => 'nullable|integer|min:0',
-            'right' => 'nullable|integer|min:0',
-            'top' => 'nullable|integer|min:0',
-            'bottom' => 'nullable|integer|min:0',
-            'size' => 'nullable|numeric|min:0.1',
+            'add_picture_url' => 'required|url|regex:/^https:\/\//',
         ];
     }
 

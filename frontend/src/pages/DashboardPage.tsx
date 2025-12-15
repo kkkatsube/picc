@@ -1,9 +1,11 @@
 import { PlusIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
+import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
 import { Counter } from '../components/counter';
 import { useCanvases } from '../hooks/useCanvases';
 
 export default function DashboardPage() {
+  const navigate = useNavigate();
   const { user, clearAuth } = useAuthStore();
   const { canvases, isLoading, createCanvas, isCreating } = useCanvases();
 
@@ -107,7 +109,11 @@ export default function DashboardPage() {
               /* Canvas Grid */
               <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
                 {canvases.map((canvas) => (
-                  <div key={canvas.id} className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow">
+                  <button
+                    key={canvas.id}
+                    onClick={() => navigate(`/canvases/${canvas.id}`)}
+                    className="bg-white rounded-lg shadow p-6 hover:shadow-lg transition-shadow text-left w-full"
+                  >
                     <h3 className="text-lg font-semibold text-gray-900 mb-2">{canvas.name || 'Untitled Canvas'}</h3>
                     {canvas.memo && (
                       <p className="text-sm text-gray-600 mb-4">{canvas.memo}</p>
@@ -116,7 +122,7 @@ export default function DashboardPage() {
                       <span>{canvas.width} × {canvas.height}</span>
                       <span>{new Date(canvas.created_at).toLocaleDateString()}</span>
                     </div>
-                  </div>
+                  </button>
                 ))}
               </div>
             )}

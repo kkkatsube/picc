@@ -4,15 +4,9 @@
 /* eslint-disable */
 
 export type CreateCanvasImageRequest = {
-    uri: string;
-    'x'?: number | null;
-    'y'?: number | null;
-    width?: number | null;
-    height?: number | null;
-    left?: number | null;
-    right?: number | null;
-    top?: number | null;
-    bottom?: number | null;
-    size?: number | null;
+    /**
+     * HTTPS URL of the image to add (server will fetch dimensions automatically)
+     */
+    add_picture_url: string;
 };
 

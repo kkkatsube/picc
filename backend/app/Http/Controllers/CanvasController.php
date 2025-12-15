@@ -28,33 +28,33 @@ class CanvasController extends Controller
     /**
      * Store a newly created canvas.
      */
-    public function store(StoreCanvasRequest $request): JsonResponse
+    public function store(StoreCanvasRequest $request): CanvasResource
     {
         /** @var \App\Models\User $user */
         $user = $request->user();
 
         $canvas = $user->canvases()->create($request->validated());
 
-        return response()->json(new CanvasResource($canvas), 201);
+        return new CanvasResource($canvas);
     }
 
     /**
      * Display the specified canvas.
      */
-    public function show(Request $request, string $id): JsonResponse
+    public function show(Request $request, string $id): CanvasResource
     {
         /** @var \App\Models\User $user */
         $user = $request->user();
 
         $canvas = $user->canvases()->findOrFail($id);
 
-        return response()->json(new CanvasResource($canvas));
+        return new CanvasResource($canvas);
     }
 
     /**
      * Update the specified canvas.
      */
-    public function update(UpdateCanvasRequest $request, string $id): JsonResponse
+    public function update(UpdateCanvasRequest $request, string $id): CanvasResource
     {
         /** @var \App\Models\User $user */
         $user = $request->user();
@@ -62,7 +62,7 @@ class CanvasController extends Controller
         $canvas = $user->canvases()->findOrFail($id);
         $canvas->update($request->validated());
 
-        return response()->json(new CanvasResource($canvas));
+        return new CanvasResource($canvas);
     }
 
     /**

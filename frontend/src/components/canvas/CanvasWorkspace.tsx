@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import type { Canvas, CanvasImage } from '../../api';
 
 interface CanvasWorkspaceProps {
@@ -7,79 +7,140 @@ interface CanvasWorkspaceProps {
 }
 
 export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
-  const [scale, setScale] = useState(0.5);
+  const canvasContainerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1.0);
+  const [isFullscreen, setIsFullscreen] = useState(false);
 
   const canvasWidth = canvas?.width || 1920;
   const canvasHeight = canvas?.height || 1080;
 
-  // スケールを画面サイズに合わせて自動調整
-  const calculateFitScale = useMemo(() => {
-    const availableWidth = Math.max(800, window.innerWidth * 0.5);
-    const availableHeight = Math.max(500, window.innerHeight * 0.6);
-
-    const scaleX = availableWidth / canvasWidth;
-    const scaleY = availableHeight / canvasHeight;
-
-    const optimalScale = Math.min(scaleX, scaleY);
-    return Math.max(0.1, Math.min(1.0, optimalScale));
-  }, [canvasWidth, canvasHeight]);
-
-  // 初回マウント時にフィット表示
+  // コンテナの横幅いっぱいに Canvas を表示するスケールを計算
   useEffect(() => {
-    setScale(calculateFitScale);
-  }, [calculateFitScale]);
+    if (!canvasContainerRef.current || isFullscreen) return;
 
-  const handleFitToScreen = () => {
-    setScale(calculateFitScale);
+    const updateScale = () => {
+      if (!canvasContainerRef.current) return;
+      const containerWidth = canvasContainerRef.current.clientWidth;
+      const calculatedScale = containerWidth / canvasWidth;
+      setScale(calculatedScale);
+    };
+
+    updateScale();
+
+    // ウィンドウリサイズ時も再計算
+    window.addEventListener('resize', updateScale);
+    return () => window.removeEventListener('resize', updateScale);
+  }, [canvasWidth, isFullscreen]);
+
+  // フルスクリーン表示
+  const enterFullscreen = async () => {
+    if (!canvasContainerRef.current) return;
+
+    try {
+      await canvasContainerRef.current.requestFullscreen();
+      setIsFullscreen(true);
+    } catch (err) {
+      console.error('Failed to enter fullscreen:', err);
+    }
   };
 
+  // Esc キーでフルスクリーン解除
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isFullscreen) {
+        if (document.fullscreenElement) {
+          document.exitFullscreen();
+        }
+        setIsFullscreen(false);
+      }
+    };
+
+    const handleFullscreenChange = () => {
+      if (!document.fullscreenElement) {
+        setIsFullscreen(false);
+      }
+    };
+
+    document.addEventListener('keydown', handleKeyDown);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
+    };
+  }, [isFullscreen]);
+
+  /* 将来的な機能拡張用（現在は非表示）
+  const calculateFitScale = () => {
+    if (!containerRef.current) return 0.5;
+    const containerWidth = containerRef.current.clientWidth - 32;
+    const containerHeight = containerRef.current.clientHeight - 32;
+    const scaleX = containerWidth / canvasWidth;
+    const scaleY = containerHeight / canvasHeight;
+    const optimalScale = Math.min(scaleX, scaleY);
+    return Math.max(0.1, Math.min(1.0, optimalScale));
+  };
+
+  const handleFitToScreen = () => {
+    setScale(calculateFitScale());
+  };
+  */
+
   return (
-    <div className="bg-gray-100 rounded-lg p-4">
+    <div className="bg-white shadow rounded-lg overflow-hidden">
       {/* Header */}
-      <div className="flex justify-between items-center mb-4">
+      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
         <h3 className="text-lg font-semibold">Canvas Workspace</h3>
+        <button
+          onClick={enterFullscreen}
+          className="inline-flex items-center px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-800 transition-colors"
+          title="Fullscreen (Press ESC to exit)"
+        >
+          <svg
+            className="h-4 w-4 mr-1"
+            xmlns="http://www.w3.org/2000/svg"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+            />
+          </svg>
+          Fullscreen
+        </button>
+        {/* 将来的な機能拡張用（Scale コントロール）
         <div className="flex items-center space-x-4">
-          {/* Scale Slider */}
           <div className="flex items-center space-x-2">
             <span className="text-sm text-gray-600">Scale:</span>
-            <input
-              type="range"
-              min="0.1"
-              max="1"
-              step="0.1"
-              value={scale}
-              onChange={(e) => setScale(parseFloat(e.target.value))}
-              className="w-24"
-            />
-            <span className="text-sm font-medium min-w-[3rem]">
-              {(scale * 100).toFixed(0)}%
-            </span>
+            <input type="range" min="0.1" max="1" step="0.1" value={scale} onChange={(e) => setScale(parseFloat(e.target.value))} className="w-24" />
+            <span className="text-sm font-medium min-w-[3rem]">{(scale * 100).toFixed(0)}%</span>
           </div>
-
-          {/* Fit to Screen Button */}
-          <button
-            onClick={handleFitToScreen}
-            className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors"
-          >
-            Fit to Screen
-          </button>
+          <button onClick={handleFitToScreen} className="px-3 py-1 bg-blue-500 text-white text-sm rounded hover:bg-blue-600 transition-colors">Fit to Screen</button>
         </div>
+        */}
       </div>
 
       {/* SVG Canvas */}
-      <div className="bg-white border-2 border-gray-300 overflow-auto rounded">
+      <div
+        ref={canvasContainerRef}
+        className={isFullscreen ? 'bg-black overflow-auto w-full h-full flex items-center justify-center' : 'w-full bg-white overflow-auto'}
+      >
         <svg
-          width={canvasWidth * scale}
-          height={canvasHeight * scale}
-          style={{ display: 'block', margin: 'auto' }}
+          width={isFullscreen ? canvasWidth : '100%'}
+          height={isFullscreen ? canvasHeight : canvasHeight * scale}
+          viewBox={isFullscreen ? undefined : `0 0 ${canvasWidth} ${canvasHeight}`}
+          preserveAspectRatio={isFullscreen ? undefined : 'xMidYMid meet'}
+          style={{ display: 'block' }}
         >
-          {/* Background rect for visual reference */}
+          {/* Background rect */}
           <rect
-            width={canvasWidth * scale}
-            height={canvasHeight * scale}
+            width={canvasWidth}
+            height={canvasHeight}
             fill="white"
-            stroke="#e5e7eb"
-            strokeWidth="1"
           />
 
           {/* Render images */}
@@ -94,16 +155,19 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
             const top = image.top || 0;
             const bottom = image.bottom || 0;
 
+            // フルスクリーン時は scale を適用しない（100% 表示）
+            const renderScale = isFullscreen ? 1 : 1;
+
             return (
               <g key={image.id}>
                 {/* ClipPath for cropping */}
                 <defs>
                   <clipPath id={`clip-${image.id}`}>
                     <rect
-                      x={(imageX + left * imageSize) * scale}
-                      y={(imageY + top * imageSize) * scale}
-                      width={(imageWidth - left - right) * imageSize * scale}
-                      height={(imageHeight - top - bottom) * imageSize * scale}
+                      x={(imageX + left * imageSize) * renderScale}
+                      y={(imageY + top * imageSize) * renderScale}
+                      width={(imageWidth - left - right) * imageSize * renderScale}
+                      height={(imageHeight - top - bottom) * imageSize * renderScale}
                     />
                   </clipPath>
                 </defs>
@@ -111,10 +175,10 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
                 {/* Image */}
                 <image
                   href={image.uri}
-                  x={imageX * scale}
-                  y={imageY * scale}
-                  width={imageWidth * imageSize * scale}
-                  height={imageHeight * imageSize * scale}
+                  x={imageX * renderScale}
+                  y={imageY * renderScale}
+                  width={imageWidth * imageSize * renderScale}
+                  height={imageHeight * imageSize * renderScale}
                   clipPath={`url(#clip-${image.id})`}
                   style={{ cursor: 'default' }}
                   preserveAspectRatio="none"
@@ -126,8 +190,8 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
       </div>
 
       {/* Canvas Info */}
-      <div className="mt-2 text-sm text-gray-600 text-center">
-        Canvas: {canvasWidth} × {canvasHeight} px | Images: {images.length} | Scale: {(scale * 100).toFixed(0)}%
+      <div className="bg-gray-50 px-4 py-2 border-t border-gray-200 text-sm text-gray-600 text-center">
+        Canvas: {canvasWidth} × {canvasHeight} px | Images: {images.length}
       </div>
     </div>
   );

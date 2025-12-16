@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 
 interface AddImageFormProps {
@@ -10,7 +10,7 @@ export function AddImageForm({ isAddingImage, onAddImage }: AddImageFormProps) {
   const [imageUrl, setImageUrl] = useState('');
   const [urlError, setUrlError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     setUrlError('');
 

@@ -64,7 +64,7 @@ class CanvasImageController extends Controller
                 'y' => 0,
                 'width' => $width,
                 'height' => $height,
-                'size' => 0.25,
+                'size' => 1.0,
                 'left' => 0,
                 'right' => 0,
                 'top' => 0,

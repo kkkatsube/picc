@@ -1,5 +1,6 @@
 import { render, screen, fireEvent } from '@testing-library/react'
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { MemoryRouter } from 'react-router-dom'
 import DashboardPage from './DashboardPage'
 import { useAuthStore } from '../stores/authStore'
 import * as useCounterModule from '../hooks/useCounter'
@@ -69,37 +70,57 @@ describe('DashboardPage', () => {
   })
 
   it('renders welcome message with user name', () => {
-    render(<DashboardPage />)
-    
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
     expect(screen.getByText('Welcome,')).toBeInTheDocument()
     expect(screen.getByText('Test User')).toBeInTheDocument()
   })
 
   it('displays PICC Canvas heading', () => {
-    render(<DashboardPage />)
-    
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
     const heading = screen.getByRole('heading', { level: 1 })
     expect(heading).toHaveTextContent('PICC Canvas')
   })
 
   it('shows create canvas message', () => {
-    render(<DashboardPage />)
-    
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
     expect(screen.getByText('Create your first canvas to start building beautiful image compositions.')).toBeInTheDocument()
   })
 
   it('has logout button that calls clearAuth', () => {
-    render(<DashboardPage />)
-    
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
     const logoutButton = screen.getByText('Logout')
     fireEvent.click(logoutButton)
-    
+
     expect(mockClearAuth).toHaveBeenCalled()
   })
 
   it('displays user name in welcome message', () => {
-    render(<DashboardPage />)
-    
+    render(
+      <MemoryRouter>
+        <DashboardPage />
+      </MemoryRouter>
+    )
+
     expect(screen.getByText('Test User')).toBeInTheDocument()
   })
 })

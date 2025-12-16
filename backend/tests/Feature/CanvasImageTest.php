@@ -49,7 +49,10 @@ describe('Canvas Image API', function () {
             $response->assertJsonPath('data.canvas_id', $this->canvas->id);
             $response->assertJsonPath('data.x', 0);
             $response->assertJsonPath('data.y', 0);
-            $response->assertJsonPath('data.size', 0.25);
+
+            // Verify size is numeric and equals 1
+            expect($response->json('data.size'))->toBeNumeric();
+            expect((float) $response->json('data.size'))->toBe(1.0);
 
             // Verify image dimensions were fetched
             expect($response->json('data.width'))->toBeGreaterThan(0);

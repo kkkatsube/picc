@@ -23,6 +23,8 @@ export default function CanvasEditorPage() {
     isLoadingImages,
     addImage,
     isAddingImage,
+    updateImage,
+    isUpdatingImage,
     deleteImage,
     isDeletingImage,
   } = useCanvasEditor(canvasId);
@@ -117,7 +119,12 @@ export default function CanvasEditorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Column: Canvas Workspace (2/3 width on desktop) */}
           <div className="lg:col-span-2">
-            <CanvasWorkspace canvas={canvas} images={images} />
+            <CanvasWorkspace
+              canvas={canvas}
+              images={images}
+              onUpdateImage={(imageId, data) => updateImage({ imageId, data })}
+              isUpdatingImage={isUpdatingImage}
+            />
           </div>
 
           {/* Right Column: Settings & Controls (1/3 width on desktop) */}

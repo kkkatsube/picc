@@ -1,15 +1,41 @@
 import { useState, useEffect, useRef } from 'react';
-import type { Canvas, CanvasImage } from '../../api';
+import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {
   canvas: Canvas | undefined;
   images: CanvasImage[];
+  onUpdateImage?: (imageId: number, data: UpdateCanvasImageRequest) => void;
+  isUpdatingImage?: boolean;
 }
 
-export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage }: CanvasWorkspaceProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1.0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Drag state
+  const [draggingImageId, setDraggingImageId] = useState<number | null>(null);
+  const [dragStartPos, setDragStartPos] = useState<{ x: number; y: number } | null>(null);
+  const [dragOffset, setDragOffset] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [committedOffsets, setCommittedOffsets] = useState<Map<number, { x: number; y: number }>>(new Map());
+
+  // Resize state
+  const [resizingImageId, setResizingImageId] = useState<number | null>(null);
+  const [resizeStartSize, setResizeStartSize] = useState<number>(1.0);
+  const [resizeStartDistance, setResizeStartDistance] = useState<number>(0);
+  const [resizeStartCenter, setResizeStartCenter] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [resizeDelta, setResizeDelta] = useState<number>(0);
+  const [committedSizes, setCommittedSizes] = useState<Map<number, number>>(new Map());
+
+  // Crop state
+  const [croppingImageId, setCroppingImageId] = useState<number | null>(null);
+  const [cropEdge, setCropEdge] = useState<'top' | 'bottom' | 'left' | 'right' | null>(null);
+  const [cropStartPos, setCropStartPos] = useState<number>(0);
+  const [cropDelta, setCropDelta] = useState<number>(0);
+  const [committedCrops, setCommittedCrops] = useState<Map<number, { left: number; right: number; top: number; bottom: number }>>(new Map());
+
+  // Hover state
+  const [hoveredImageId, setHoveredImageId] = useState<number | null>(null);
 
   const canvasWidth = canvas?.width || 1920;
   const canvasHeight = canvas?.height || 1080;
@@ -69,6 +95,313 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
       document.removeEventListener('fullscreenchange', handleFullscreenChange);
     };
   }, [isFullscreen]);
+
+  // Image drag handlers
+  const handleImageMouseDown = (e: React.MouseEvent<SVGImageElement>, image: CanvasImage) => {
+    e.preventDefault();
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    setDraggingImageId(image.id);
+    setDragStartPos({ x: svgP.x, y: svgP.y });
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    // Handle crop
+    if (croppingImageId) {
+      handleCropMove(e);
+      return;
+    }
+
+    // Handle resize
+    if (resizingImageId) {
+      handleResizeMove(e);
+      return;
+    }
+
+    // Handle drag
+    if (!draggingImageId || !dragStartPos) return;
+
+    const svg = e.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    setDragOffset({
+      x: svgP.x - dragStartPos.x,
+      y: svgP.y - dragStartPos.y,
+    });
+  };
+
+  const handleMouseUp = () => {
+    // Handle crop end
+    if (croppingImageId) {
+      handleCropEnd();
+      return;
+    }
+
+    // Handle resize end
+    if (resizingImageId) {
+      handleResizeEnd();
+      return;
+    }
+
+    // Handle drag end
+    if (!draggingImageId || !onUpdateImage) {
+      setDraggingImageId(null);
+      setDragStartPos(null);
+      setDragOffset({ x: 0, y: 0 });
+      return;
+    }
+
+    const image = images.find((img) => img.id === draggingImageId);
+    if (!image) {
+      setDraggingImageId(null);
+      setDragStartPos(null);
+      setDragOffset({ x: 0, y: 0 });
+      return;
+    }
+
+    // Store the committed offset to prevent flicker
+    setCommittedOffsets((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(draggingImageId, dragOffset);
+      return newMap;
+    });
+
+    // Update image position
+    const newX = (image.x || 0) + dragOffset.x;
+    const newY = (image.y || 0) + dragOffset.y;
+
+    onUpdateImage(draggingImageId, {
+      x: Math.round(newX),
+      y: Math.round(newY),
+    });
+
+    // Reset drag state immediately
+    setDraggingImageId(null);
+    setDragStartPos(null);
+    setDragOffset({ x: 0, y: 0 });
+  };
+
+  // Clear committed offset when image position updates from server
+  useEffect(() => {
+    if (!isUpdatingImage && committedOffsets.size > 0) {
+      setCommittedOffsets(new Map());
+    }
+    if (!isUpdatingImage && committedSizes.size > 0) {
+      setCommittedSizes(new Map());
+    }
+    if (!isUpdatingImage && committedCrops.size > 0) {
+      setCommittedCrops(new Map());
+    }
+  }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedCrops.size]);
+
+  // Resize handlers
+  const handleResizeStart = (e: React.MouseEvent, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    // Calculate center point of the image (use current display size)
+    const committedSize = committedSizes.get(image.id);
+    const currentSize = committedSize || image.size || 1.0;
+    const imageWidth = (image.width || 0) * currentSize;
+    const imageHeight = (image.height || 0) * currentSize;
+    const centerX = (image.x || 0) + imageWidth / 2;
+    const centerY = (image.y || 0) + imageHeight / 2;
+
+    // Calculate initial distance from center to mouse
+    const dx = svgP.x - centerX;
+    const dy = svgP.y - centerY;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+
+    setResizingImageId(image.id);
+    setResizeStartSize(currentSize);
+    setResizeStartDistance(distance);
+    setResizeStartCenter({ x: centerX, y: centerY });
+    setResizeDelta(0);
+  };
+
+  const handleResizeMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!resizingImageId) return;
+
+    const svg = e.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    // Use fixed center point from resize start
+    const dx = svgP.x - resizeStartCenter.x;
+    const dy = svgP.y - resizeStartCenter.y;
+    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+
+    // Calculate size delta based on distance change
+    const distanceRatio = currentDistance / resizeStartDistance;
+    const newSize = resizeStartSize * distanceRatio;
+    const delta = newSize - resizeStartSize;
+
+    setResizeDelta(delta);
+  };
+
+  const handleResizeEnd = () => {
+    if (!resizingImageId || !onUpdateImage) {
+      setResizingImageId(null);
+      setResizeStartSize(1.0);
+      setResizeStartDistance(0);
+      setResizeStartCenter({ x: 0, y: 0 });
+      setResizeDelta(0);
+      return;
+    }
+
+    const newSize = Math.max(0.1, Math.min(5.0, resizeStartSize + resizeDelta));
+
+    // Store committed size to prevent flicker
+    setCommittedSizes((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(resizingImageId, newSize);
+      return newMap;
+    });
+
+    // Update image size
+    onUpdateImage(resizingImageId, {
+      size: newSize,
+    });
+
+    // Reset resize state immediately (committed size will keep the display)
+    setResizingImageId(null);
+    setResizeStartSize(1.0);
+    setResizeStartDistance(0);
+    setResizeStartCenter({ x: 0, y: 0 });
+    setResizeDelta(0);
+  };
+
+  // Crop handlers
+  const handleCropStart = (e: React.MouseEvent, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    const svg = e.currentTarget.ownerSVGElement;
+    if (!svg) return;
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    setCroppingImageId(image.id);
+    setCropEdge(edge);
+    setCropStartPos(edge === 'top' || edge === 'bottom' ? svgP.y : svgP.x);
+    setCropDelta(0);
+  };
+
+  const handleCropMove = (e: React.MouseEvent<SVGSVGElement>) => {
+    if (!croppingImageId || !cropEdge) return;
+
+    const image = images.find((img) => img.id === croppingImageId);
+    if (!image) return;
+
+    const svg = e.currentTarget;
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    const currentPos = cropEdge === 'top' || cropEdge === 'bottom' ? svgP.y : svgP.x;
+    const imageSize = image.size || 1.0;
+
+    // Calculate delta in pixels (will be converted to crop units)
+    let delta = 0;
+    if (cropEdge === 'top') {
+      delta = currentPos - cropStartPos;
+    } else if (cropEdge === 'bottom') {
+      delta = cropStartPos - currentPos;
+    } else if (cropEdge === 'left') {
+      delta = currentPos - cropStartPos;
+    } else if (cropEdge === 'right') {
+      delta = cropStartPos - currentPos;
+    }
+
+    // Convert to crop units (delta / imageSize)
+    setCropDelta(delta / imageSize);
+  };
+
+  const handleCropEnd = () => {
+    if (!croppingImageId || !cropEdge || !onUpdateImage) {
+      setCroppingImageId(null);
+      setCropEdge(null);
+      setCropStartPos(0);
+      setCropDelta(0);
+      return;
+    }
+
+    const image = images.find((img) => img.id === croppingImageId);
+    if (!image) {
+      setCroppingImageId(null);
+      setCropEdge(null);
+      setCropStartPos(0);
+      setCropDelta(0);
+      return;
+    }
+
+    const committedCrop = committedCrops.get(croppingImageId);
+    const currentLeft = committedCrop?.left || image.left || 0;
+    const currentRight = committedCrop?.right || image.right || 0;
+    const currentTop = committedCrop?.top || image.top || 0;
+    const currentBottom = committedCrop?.bottom || image.bottom || 0;
+
+    let newCrop = { left: currentLeft, right: currentRight, top: currentTop, bottom: currentBottom };
+
+    if (cropEdge === 'top') {
+      newCrop.top = Math.round(Math.max(0, currentTop + cropDelta));
+    } else if (cropEdge === 'bottom') {
+      newCrop.bottom = Math.round(Math.max(0, currentBottom + cropDelta));
+    } else if (cropEdge === 'left') {
+      newCrop.left = Math.round(Math.max(0, currentLeft + cropDelta));
+    } else if (cropEdge === 'right') {
+      newCrop.right = Math.round(Math.max(0, currentRight + cropDelta));
+    }
+
+    // Round all values to integers
+    newCrop = {
+      left: Math.round(newCrop.left),
+      right: Math.round(newCrop.right),
+      top: Math.round(newCrop.top),
+      bottom: Math.round(newCrop.bottom),
+    };
+
+    // Store committed crop to prevent flicker
+    setCommittedCrops((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(croppingImageId, newCrop);
+      return newMap;
+    });
+
+    // Update image crop
+    console.log('Updating crop:', { imageId: croppingImageId, newCrop });
+    onUpdateImage(croppingImageId, newCrop);
+
+    // Reset crop state
+    setCroppingImageId(null);
+    setCropEdge(null);
+    setCropStartPos(0);
+    setCropDelta(0);
+  };
 
   /* 将来的な機能拡張用（現在は非表示）
   const calculateFitScale = () => {
@@ -134,7 +467,19 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
           height={isFullscreen ? canvasHeight : canvasHeight * scale}
           viewBox={isFullscreen ? undefined : `0 0 ${canvasWidth} ${canvasHeight}`}
           preserveAspectRatio={isFullscreen ? undefined : 'xMidYMid meet'}
-          style={{ display: 'block' }}
+          style={{
+            display: 'block',
+            cursor: croppingImageId && cropEdge
+              ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
+              : resizingImageId
+              ? 'nwse-resize'
+              : draggingImageId
+              ? 'grabbing'
+              : 'default'
+          }}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
         >
           {/* Background rect */}
           <rect
@@ -145,18 +490,60 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
 
           {/* Render images */}
           {images.map((image) => {
-            const imageSize = image.size || 0.25;
+            const baseSize = image.size || 1.0;
             const imageX = image.x || 0;
             const imageY = image.y || 0;
             const imageWidth = image.width || 0;
             const imageHeight = image.height || 0;
-            const left = image.left || 0;
-            const right = image.right || 0;
-            const top = image.top || 0;
-            const bottom = image.bottom || 0;
+            const baseLeft = image.left || 0;
+            const baseRight = image.right || 0;
+            const baseTop = image.top || 0;
+            const baseBottom = image.bottom || 0;
 
             // フルスクリーン時は scale を適用しない（100% 表示）
             const renderScale = isFullscreen ? 1 : 1;
+
+            // Apply drag offset if this image is being dragged or has committed offset
+            const isDragging = draggingImageId === image.id;
+            const committedOffset = committedOffsets.get(image.id);
+            const offsetX = isDragging ? dragOffset.x : (committedOffset?.x || 0);
+            const offsetY = isDragging ? dragOffset.y : (committedOffset?.y || 0);
+            const displayX = imageX + offsetX;
+            const displayY = imageY + offsetY;
+
+            // Apply resize delta if this image is being resized or has committed size
+            const isResizing = resizingImageId === image.id;
+            const committedSize = committedSizes.get(image.id);
+            const imageSize = isResizing
+              ? Math.max(0.1, Math.min(5.0, resizeStartSize + resizeDelta))
+              : (committedSize || baseSize);
+
+            // Apply crop delta if this image is being cropped or has committed crop
+            const isCropping = croppingImageId === image.id;
+            const committedCrop = committedCrops.get(image.id);
+            let left = committedCrop?.left || baseLeft;
+            let right = committedCrop?.right || baseRight;
+            let top = committedCrop?.top || baseTop;
+            let bottom = committedCrop?.bottom || baseBottom;
+
+            if (isCropping && cropEdge) {
+              if (cropEdge === 'top') {
+                top = Math.max(0, (committedCrop?.top || baseTop) + cropDelta);
+              } else if (cropEdge === 'bottom') {
+                bottom = Math.max(0, (committedCrop?.bottom || baseBottom) + cropDelta);
+              } else if (cropEdge === 'left') {
+                left = Math.max(0, (committedCrop?.left || baseLeft) + cropDelta);
+              } else if (cropEdge === 'right') {
+                right = Math.max(0, (committedCrop?.right || baseRight) + cropDelta);
+              }
+            }
+
+            // Check if hovered
+            const isHovered = hoveredImageId === image.id;
+
+            // Calculate handle size based on canvas scale (to keep consistent screen size)
+            // In normal view, canvas width fits container, so handle should be proportional
+            const handleSize = isFullscreen ? 16 : (canvasWidth / 100); // ~19px for 1920px canvas
 
             return (
               <g key={image.id}>
@@ -164,8 +551,8 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
                 <defs>
                   <clipPath id={`clip-${image.id}`}>
                     <rect
-                      x={(imageX + left * imageSize) * renderScale}
-                      y={(imageY + top * imageSize) * renderScale}
+                      x={(displayX + left * imageSize) * renderScale}
+                      y={(displayY + top * imageSize) * renderScale}
                       width={(imageWidth - left - right) * imageSize * renderScale}
                       height={(imageHeight - top - bottom) * imageSize * renderScale}
                     />
@@ -175,14 +562,138 @@ export function CanvasWorkspace({ canvas, images }: CanvasWorkspaceProps) {
                 {/* Image */}
                 <image
                   href={image.uri}
-                  x={imageX * renderScale}
-                  y={imageY * renderScale}
+                  x={displayX * renderScale}
+                  y={displayY * renderScale}
                   width={imageWidth * imageSize * renderScale}
                   height={imageHeight * imageSize * renderScale}
                   clipPath={`url(#clip-${image.id})`}
-                  style={{ cursor: 'default' }}
+                  style={{
+                    cursor: isCropping && cropEdge
+                      ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
+                      : isResizing
+                      ? 'nwse-resize'
+                      : isDragging
+                      ? 'grabbing'
+                      : 'move',
+                    opacity: isDragging || isResizing || isCropping ? 0.7 : 1
+                  }}
                   preserveAspectRatio="none"
+                  onMouseDown={(e) => handleImageMouseDown(e, image)}
+                  onMouseEnter={() => setHoveredImageId(image.id)}
+                  onMouseLeave={() => setHoveredImageId(null)}
                 />
+
+                {/* Resize handles - show on hover (hide when any operation is active) */}
+                {isHovered && !isDragging && !isResizing && !isCropping && (
+                  <>
+                    {/* Top-left corner */}
+                    <rect
+                      x={(displayX * renderScale) - handleSize / 2}
+                      y={(displayY * renderScale) - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#3B82F6"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleResizeStart(e, image, 'nw')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Top-right corner */}
+                    <rect
+                      x={(displayX + imageWidth * imageSize) * renderScale - handleSize / 2}
+                      y={(displayY * renderScale) - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#3B82F6"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleResizeStart(e, image, 'ne')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Bottom-left corner */}
+                    <rect
+                      x={(displayX * renderScale) - handleSize / 2}
+                      y={(displayY + imageHeight * imageSize) * renderScale - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#3B82F6"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleResizeStart(e, image, 'sw')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Bottom-right corner */}
+                    <rect
+                      x={(displayX + imageWidth * imageSize) * renderScale - handleSize / 2}
+                      y={(displayY + imageHeight * imageSize) * renderScale - handleSize / 2}
+                      width={handleSize}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#3B82F6"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleResizeStart(e, image, 'se')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+
+                    {/* Edge handles for cropping */}
+                    {/* Top edge */}
+                    <rect
+                      x={(displayX + imageWidth * imageSize / 2) * renderScale - handleSize}
+                      y={(displayY + top * imageSize) * renderScale - handleSize / 2}
+                      width={handleSize * 2}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#10B981"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleCropStart(e, image, 'top')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Bottom edge */}
+                    <rect
+                      x={(displayX + imageWidth * imageSize / 2) * renderScale - handleSize}
+                      y={(displayY + (imageHeight - bottom) * imageSize) * renderScale - handleSize / 2}
+                      width={handleSize * 2}
+                      height={handleSize}
+                      fill="white"
+                      stroke="#10B981"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleCropStart(e, image, 'bottom')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Left edge */}
+                    <rect
+                      x={(displayX + left * imageSize) * renderScale - handleSize / 2}
+                      y={(displayY + imageHeight * imageSize / 2) * renderScale - handleSize}
+                      width={handleSize}
+                      height={handleSize * 2}
+                      fill="white"
+                      stroke="#10B981"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleCropStart(e, image, 'left')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                    {/* Right edge */}
+                    <rect
+                      x={(displayX + (imageWidth - right) * imageSize) * renderScale - handleSize / 2}
+                      y={(displayY + imageHeight * imageSize / 2) * renderScale - handleSize}
+                      width={handleSize}
+                      height={handleSize * 2}
+                      fill="white"
+                      stroke="#10B981"
+                      strokeWidth={handleSize / 8}
+                      style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
+                      onMouseDown={(e) => handleCropStart(e, image, 'right')}
+                      onMouseEnter={() => setHoveredImageId(image.id)}
+                    />
+                  </>
+                )}
               </g>
             );
           })}

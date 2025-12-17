@@ -4,6 +4,7 @@ import type {
   CanvasResponse,
   UpdateCanvasRequest,
   CreateCanvasImageRequest,
+  UpdateCanvasImageRequest,
 } from '../api';
 
 /**
@@ -62,6 +63,58 @@ export function useCanvasEditor(canvasId: number) {
     },
   });
 
+  // PUT /api/canvases/{canvasId}/images/{id} - 画像更新
+  const updateImageMutation = useMutation({
+    mutationFn: ({ imageId, data }: { imageId: number; data: UpdateCanvasImageRequest }) =>
+      CanvasImageService.updateCanvasImage(canvasId, imageId, data),
+    onMutate: async ({ imageId, data }) => {
+      // Cancel ongoing queries
+      await queryClient.cancelQueries({ queryKey: ['canvas', canvasId, 'images'] });
+
+      // Snapshot previous value
+      const previousImages = queryClient.getQueryData(['canvas', canvasId, 'images']);
+
+      // Optimistically update to the new value
+      queryClient.setQueryData(['canvas', canvasId, 'images'], (old: any) => {
+        if (!old?.data) return old;
+        return {
+          ...old,
+          data: old.data.map((img: any) => {
+            if (img.id === imageId) {
+              // Merge with existing values, ensuring numbers are preserved
+              return {
+                ...img,
+                ...data,
+                // Ensure numeric fields are numbers
+                x: data.x !== undefined ? Number(data.x) : img.x,
+                y: data.y !== undefined ? Number(data.y) : img.y,
+                size: data.size !== undefined ? Number(data.size) : img.size,
+                left: data.left !== undefined ? Number(data.left) : img.left,
+                right: data.right !== undefined ? Number(data.right) : img.right,
+                top: data.top !== undefined ? Number(data.top) : img.top,
+                bottom: data.bottom !== undefined ? Number(data.bottom) : img.bottom,
+              };
+            }
+            return img;
+          }),
+        };
+      });
+
+      return { previousImages };
+    },
+    onError: (error, variables, context) => {
+      // Rollback on error
+      if (context?.previousImages) {
+        queryClient.setQueryData(['canvas', canvasId, 'images'], context.previousImages);
+      }
+      console.error('Failed to update image:', error);
+    },
+    onSettled: () => {
+      // Refetch to ensure consistency
+      queryClient.invalidateQueries({ queryKey: ['canvas', canvasId, 'images'] });
+    },
+  });
+
   // DELETE /api/canvases/{canvasId}/images/{id} - 画像削除
   const deleteImageMutation = useMutation({
     mutationFn: (imageId: number) =>
@@ -110,6 +163,11 @@ export function useCanvasEditor(canvasId: number) {
     addImage: addImageMutation.mutate,
     isAddingImage: addImageMutation.isPending,
     addImageError: addImageMutation.error,
+
+    // 画像更新
+    updateImage: updateImageMutation.mutate,
+    isUpdatingImage: updateImageMutation.isPending,
+    updateImageError: updateImageMutation.error,
 
     // 画像削除
     deleteImage: deleteImageMutation.mutate,

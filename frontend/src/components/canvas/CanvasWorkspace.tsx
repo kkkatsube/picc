@@ -98,6 +98,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
   // Image drag handlers
   const handleImageMouseDown = (e: React.MouseEvent<SVGImageElement>, image: CanvasImage) => {
+    // Disable drag in fullscreen mode (read-only)
+    if (isFullscreen) return;
+
     e.preventDefault();
     const svg = e.currentTarget.ownerSVGElement;
     if (!svg) return;
@@ -206,6 +209,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
   // Resize handlers
   const handleResizeStart = (e: React.MouseEvent, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
+    // Disable resize in fullscreen mode (read-only)
+    if (isFullscreen) return;
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -293,6 +299,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
   // Crop handlers
   const handleCropStart = (e: React.MouseEvent, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
+    // Disable crop in fullscreen mode (read-only)
+    if (isFullscreen) return;
+
     e.preventDefault();
     e.stopPropagation();
 
@@ -463,13 +472,15 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
         className={isFullscreen ? 'bg-black overflow-auto w-full h-full flex items-center justify-center' : 'w-full bg-white overflow-auto'}
       >
         <svg
-          width={isFullscreen ? canvasWidth : '100%'}
-          height={isFullscreen ? canvasHeight : canvasHeight * scale}
-          viewBox={isFullscreen ? undefined : `0 0 ${canvasWidth} ${canvasHeight}`}
-          preserveAspectRatio={isFullscreen ? undefined : 'xMidYMid meet'}
+          width={isFullscreen ? '100%' : '100%'}
+          height={isFullscreen ? '100%' : canvasHeight * scale}
+          viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
+          preserveAspectRatio="xMidYMid meet"
           style={{
             display: 'block',
-            cursor: croppingImageId && cropEdge
+            cursor: isFullscreen
+              ? 'default'
+              : croppingImageId && cropEdge
               ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
               : resizingImageId
               ? 'nwse-resize'
@@ -568,7 +579,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                   height={imageHeight * imageSize * renderScale}
                   clipPath={`url(#clip-${image.id})`}
                   style={{
-                    cursor: isCropping && cropEdge
+                    cursor: isFullscreen
+                      ? 'default'
+                      : isCropping && cropEdge
                       ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
                       : isResizing
                       ? 'nwse-resize'
@@ -583,8 +596,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                   onMouseLeave={() => setHoveredImageId(null)}
                 />
 
-                {/* Resize handles - show on hover (hide when any operation is active) */}
-                {isHovered && !isDragging && !isResizing && !isCropping && (
+                {/* Resize handles - show on hover (hide when any operation is active or in fullscreen) */}
+                {!isFullscreen && isHovered && !isDragging && !isResizing && !isCropping && (
                   <>
                     {/* Top-left corner */}
                     <rect

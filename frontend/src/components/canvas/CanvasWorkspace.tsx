@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, type MouseEvent } from 'react';
 import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {
@@ -108,7 +108,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   }, [isFullscreen]);
 
   // Image drag handlers
-  const handleImageMouseDown = (e: React.MouseEvent<SVGImageElement>, image: CanvasImage) => {
+  const handleImageMouseDown = (e: MouseEvent<SVGImageElement>, image: CanvasImage) => {
     // Disable drag in fullscreen mode (read-only)
     if (isFullscreen) return;
 
@@ -126,7 +126,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setDragOffset({ x: 0, y: 0 });
   };
 
-  const handleMouseMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleMouseMove = (e: MouseEvent<SVGSVGElement>) => {
     // Handle crop
     if (croppingImageId) {
       handleCropMove(e);
@@ -227,7 +227,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedPositions.size, committedCrops.size]);
 
   // Resize handlers
-  const handleResizeStart = (e: React.MouseEvent<SVGRectElement>, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
+  const handleResizeStart = (e: MouseEvent<SVGRectElement>, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
     // Disable resize in fullscreen mode (read-only)
     if (isFullscreen) return;
 
@@ -278,7 +278,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setResizePositionDelta({ x: 0, y: 0 });
   };
 
-  const handleResizeMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleResizeMove = (e: MouseEvent<SVGSVGElement>) => {
     if (!resizingImageId || !resizeCorner) return;
 
     const svg = e.currentTarget;
@@ -391,7 +391,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   };
 
   // Crop handlers
-  const handleCropStart = (e: React.MouseEvent<SVGRectElement>, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
+  const handleCropStart = (e: MouseEvent<SVGRectElement>, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
     // Disable crop in fullscreen mode (read-only)
     if (isFullscreen) return;
 
@@ -412,7 +412,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setCropDelta(0);
   };
 
-  const handleCropMove = (e: React.MouseEvent<SVGSVGElement>) => {
+  const handleCropMove = (e: MouseEvent<SVGSVGElement>) => {
     if (!croppingImageId || !cropEdge) return;
 
     const image = images.find((img) => img.id === croppingImageId);

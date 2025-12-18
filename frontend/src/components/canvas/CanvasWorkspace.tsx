@@ -24,10 +24,13 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   const [resizeStartSize, setResizeStartSize] = useState<number>(1.0);
   const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [resizeCorner, setResizeCorner] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
+  const [resizeAnchor, setResizeAnchor] = useState<{ x: number; y: number }>({ x: 0, y: 0 }); // Fixed opposite corner
   const [resizeStartImagePos, setResizeStartImagePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [resizeStartImageSize, setResizeStartImageSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [resizeDelta, setResizeDelta] = useState<number>(0);
+  const [resizePositionDelta, setResizePositionDelta] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [committedSizes, setCommittedSizes] = useState<Map<number, number>>(new Map());
+  const [committedPositions, setCommittedPositions] = useState<Map<number, { x: number; y: number }>>(new Map());
 
   // Crop state
   const [croppingImageId, setCroppingImageId] = useState<number | null>(null);
@@ -182,10 +185,12 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
       return;
     }
 
+    const currentImageId = draggingImageId;
+
     // Store the committed offset to prevent flicker
     setCommittedOffsets((prev) => {
       const newMap = new Map(prev);
-      newMap.set(draggingImageId, dragOffset);
+      newMap.set(currentImageId, dragOffset);
       return newMap;
     });
 
@@ -193,7 +198,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     const newX = (image.x || 0) + dragOffset.x;
     const newY = (image.y || 0) + dragOffset.y;
 
-    onUpdateImage(draggingImageId, {
+    onUpdateImage(currentImageId, {
       x: Math.round(newX),
       y: Math.round(newY),
     });
@@ -202,9 +207,12 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setDraggingImageId(null);
     setDragStartPos(null);
     setDragOffset({ x: 0, y: 0 });
+
+    // Keep the image hovered after drag to show handles
+    setHoveredImageId(currentImageId);
   };
 
-  // Clear committed offset when image position updates from server
+  // Clear committed values when image updates from server
   useEffect(() => {
     if (!isUpdatingImage && committedOffsets.size > 0) {
       setCommittedOffsets(new Map());
@@ -212,10 +220,13 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     if (!isUpdatingImage && committedSizes.size > 0) {
       setCommittedSizes(new Map());
     }
+    if (!isUpdatingImage && committedPositions.size > 0) {
+      setCommittedPositions(new Map());
+    }
     if (!isUpdatingImage && committedCrops.size > 0) {
       setCommittedCrops(new Map());
     }
-  }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedCrops.size]);
+  }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedPositions.size, committedCrops.size]);
 
   // Resize handlers
   const handleResizeStart = (e: React.MouseEvent, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
@@ -235,17 +246,45 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
     // Store initial state
     const committedSize = committedSizes.get(image.id);
+    const committedPosition = committedPositions.get(image.id);
     const currentSize = committedSize || image.size || 1.0;
+    const currentX = committedPosition?.x ?? image.x ?? 0;
+    const currentY = committedPosition?.y ?? image.y ?? 0;
     const imageWidth = (image.width || 0) * currentSize;
     const imageHeight = (image.height || 0) * currentSize;
+
+    // Calculate anchor point (opposite corner that stays fixed)
+    let anchorX = currentX;
+    let anchorY = currentY;
+
+    switch (corner) {
+      case 'nw': // Dragging top-left → anchor is bottom-right
+        anchorX = currentX + imageWidth;
+        anchorY = currentY + imageHeight;
+        break;
+      case 'ne': // Dragging top-right → anchor is bottom-left
+        anchorX = currentX;
+        anchorY = currentY + imageHeight;
+        break;
+      case 'sw': // Dragging bottom-left → anchor is top-right
+        anchorX = currentX + imageWidth;
+        anchorY = currentY;
+        break;
+      case 'se': // Dragging bottom-right → anchor is top-left
+        anchorX = currentX;
+        anchorY = currentY;
+        break;
+    }
 
     setResizingImageId(image.id);
     setResizeStartSize(currentSize);
     setResizeStartPos({ x: svgP.x, y: svgP.y });
     setResizeCorner(corner);
-    setResizeStartImagePos({ x: image.x || 0, y: image.y || 0 });
+    setResizeAnchor({ x: anchorX, y: anchorY });
+    setResizeStartImagePos({ x: currentX, y: currentY });
     setResizeStartImageSize({ width: imageWidth, height: imageHeight });
     setResizeDelta(0);
+    setResizePositionDelta({ x: 0, y: 0 });
   };
 
   const handleResizeMove = (e: React.MouseEvent<SVGSVGElement>) => {
@@ -257,40 +296,17 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     pt.y = e.clientY;
     const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
 
-    // Calculate handle movement
-    const deltaX = svgP.x - resizeStartPos.x;
-    const deltaY = svgP.y - resizeStartPos.y;
-
-    // Calculate new size based on which corner is being dragged
-    let newWidth = resizeStartImageSize.width;
-    let newHeight = resizeStartImageSize.height;
-
-    switch (resizeCorner) {
-      case 'se': // South-East (bottom-right)
-        newWidth = resizeStartImageSize.width + deltaX;
-        newHeight = resizeStartImageSize.height + deltaY;
-        break;
-      case 'sw': // South-West (bottom-left)
-        newWidth = resizeStartImageSize.width - deltaX;
-        newHeight = resizeStartImageSize.height + deltaY;
-        break;
-      case 'ne': // North-East (top-right)
-        newWidth = resizeStartImageSize.width + deltaX;
-        newHeight = resizeStartImageSize.height - deltaY;
-        break;
-      case 'nw': // North-West (top-left)
-        newWidth = resizeStartImageSize.width - deltaX;
-        newHeight = resizeStartImageSize.height - deltaY;
-        break;
-    }
-
-    // Maintain aspect ratio - use the larger relative change
     const image = images.find(img => img.id === resizingImageId);
     if (!image) return;
 
     const originalWidth = image.width || 0;
     const originalHeight = image.height || 0;
 
+    // Calculate new width and height based on distance from anchor
+    const newWidth = Math.abs(svgP.x - resizeAnchor.x);
+    const newHeight = Math.abs(svgP.y - resizeAnchor.y);
+
+    // Calculate size ratio to maintain aspect ratio
     const widthRatio = newWidth / (originalWidth * resizeStartSize);
     const heightRatio = newHeight / (originalHeight * resizeStartSize);
 
@@ -299,7 +315,38 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     const newSize = resizeStartSize * sizeRatio;
     const delta = newSize - resizeStartSize;
 
+    // Calculate new position based on which corner is being dragged
+    // The anchor stays fixed, and the top-left corner position changes
+    const finalWidth = originalWidth * newSize;
+    const finalHeight = originalHeight * newSize;
+
+    let newX = resizeStartImagePos.x;
+    let newY = resizeStartImagePos.y;
+
+    switch (resizeCorner) {
+      case 'nw': // Dragging top-left → anchor (bottom-right) is fixed
+        newX = resizeAnchor.x - finalWidth;
+        newY = resizeAnchor.y - finalHeight;
+        break;
+      case 'ne': // Dragging top-right → anchor (bottom-left) is fixed
+        newX = resizeAnchor.x;
+        newY = resizeAnchor.y - finalHeight;
+        break;
+      case 'sw': // Dragging bottom-left → anchor (top-right) is fixed
+        newX = resizeAnchor.x - finalWidth;
+        newY = resizeAnchor.y;
+        break;
+      case 'se': // Dragging bottom-right → anchor (top-left) is fixed
+        newX = resizeAnchor.x;
+        newY = resizeAnchor.y;
+        break;
+    }
+
     setResizeDelta(delta);
+    setResizePositionDelta({
+      x: newX - resizeStartImagePos.x,
+      y: newY - resizeStartImagePos.y,
+    });
   };
 
   const handleResizeEnd = () => {
@@ -308,34 +355,52 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
       setResizeStartSize(1.0);
       setResizeStartPos({ x: 0, y: 0 });
       setResizeCorner(null);
+      setResizeAnchor({ x: 0, y: 0 });
       setResizeStartImagePos({ x: 0, y: 0 });
       setResizeStartImageSize({ width: 0, height: 0 });
       setResizeDelta(0);
+      setResizePositionDelta({ x: 0, y: 0 });
       return;
     }
 
+    const currentImageId = resizingImageId;
     const newSize = Math.max(0.1, Math.min(5.0, resizeStartSize + resizeDelta));
+    const newX = Math.round(resizeStartImagePos.x + resizePositionDelta.x);
+    const newY = Math.round(resizeStartImagePos.y + resizePositionDelta.y);
 
-    // Store committed size to prevent flicker
+    // Store committed size and position to prevent flicker
     setCommittedSizes((prev) => {
       const newMap = new Map(prev);
-      newMap.set(resizingImageId, newSize);
+      newMap.set(currentImageId, newSize);
       return newMap;
     });
 
-    // Update image size
-    onUpdateImage(resizingImageId, {
-      size: newSize,
+    setCommittedPositions((prev) => {
+      const newMap = new Map(prev);
+      newMap.set(currentImageId, { x: newX, y: newY });
+      return newMap;
     });
 
-    // Reset resize state immediately (committed size will keep the display)
+    // Update image size and position
+    onUpdateImage(currentImageId, {
+      size: newSize,
+      x: newX,
+      y: newY,
+    });
+
+    // Reset resize state immediately (committed values will keep the display)
     setResizingImageId(null);
     setResizeStartSize(1.0);
     setResizeStartPos({ x: 0, y: 0 });
     setResizeCorner(null);
+    setResizeAnchor({ x: 0, y: 0 });
     setResizeStartImagePos({ x: 0, y: 0 });
     setResizeStartImageSize({ width: 0, height: 0 });
     setResizeDelta(0);
+    setResizePositionDelta({ x: 0, y: 0 });
+
+    // Keep the image hovered after resize to show handles
+    setHoveredImageId(currentImageId);
   };
 
   // Crop handlers
@@ -409,7 +474,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
       return;
     }
 
-    const committedCrop = committedCrops.get(croppingImageId);
+    const currentImageId = croppingImageId;
+    const committedCrop = committedCrops.get(currentImageId);
     const currentLeft = committedCrop?.left || image.left || 0;
     const currentRight = committedCrop?.right || image.right || 0;
     const currentTop = committedCrop?.top || image.top || 0;
@@ -438,19 +504,22 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     // Store committed crop to prevent flicker
     setCommittedCrops((prev) => {
       const newMap = new Map(prev);
-      newMap.set(croppingImageId, newCrop);
+      newMap.set(currentImageId, newCrop);
       return newMap;
     });
 
     // Update image crop
-    console.log('Updating crop:', { imageId: croppingImageId, newCrop });
-    onUpdateImage(croppingImageId, newCrop);
+    console.log('Updating crop:', { imageId: currentImageId, newCrop });
+    onUpdateImage(currentImageId, newCrop);
 
     // Reset crop state
     setCroppingImageId(null);
     setCropEdge(null);
     setCropStartPos(0);
     setCropDelta(0);
+
+    // Keep the image hovered after crop to show handles
+    setHoveredImageId(currentImageId);
   };
 
   /* 将来的な機能拡張用（現在は非表示）
@@ -579,11 +648,19 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
             const committedOffset = committedOffsets.get(image.id);
             const offsetX = isDragging ? dragOffset.x : (committedOffset?.x || 0);
             const offsetY = isDragging ? dragOffset.y : (committedOffset?.y || 0);
-            const displayX = imageX + offsetX;
-            const displayY = imageY + offsetY;
+
+            // Apply resize position delta if this image is being resized or has committed position
+            const isResizing = resizingImageId === image.id;
+            const committedPosition = committedPositions.get(image.id);
+            const resizeOffsetX = isResizing ? resizePositionDelta.x : 0;
+            const resizeOffsetY = isResizing ? resizePositionDelta.y : 0;
+            const baseX = committedPosition?.x ?? imageX;
+            const baseY = committedPosition?.y ?? imageY;
+
+            const displayX = baseX + offsetX + resizeOffsetX;
+            const displayY = baseY + offsetY + resizeOffsetY;
 
             // Apply resize delta if this image is being resized or has committed size
-            const isResizing = resizingImageId === image.id;
             const committedSize = committedSizes.get(image.id);
             const imageSize = isResizing
               ? Math.max(0.1, Math.min(5.0, resizeStartSize + resizeDelta))

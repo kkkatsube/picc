@@ -22,11 +22,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   // Resize state
   const [resizingImageId, setResizingImageId] = useState<number | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<number>(1.0);
-  const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [resizeCorner, setResizeCorner] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
   const [resizeAnchor, setResizeAnchor] = useState<{ x: number; y: number }>({ x: 0, y: 0 }); // Fixed opposite corner
   const [resizeStartImagePos, setResizeStartImagePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const [resizeStartImageSize, setResizeStartImageSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [resizeDelta, setResizeDelta] = useState<number>(0);
   const [resizePositionDelta, setResizePositionDelta] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [committedSizes, setCommittedSizes] = useState<Map<number, number>>(new Map());
@@ -229,20 +227,15 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedPositions.size, committedCrops.size]);
 
   // Resize handlers
-  const handleResizeStart = (e: React.MouseEvent, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
+  const handleResizeStart = (e: React.MouseEvent<SVGRectElement>, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
     // Disable resize in fullscreen mode (read-only)
     if (isFullscreen) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const svg = e.currentTarget.ownerSVGElement;
-    if (!svg) return;
-
-    const pt = svg.createSVGPoint();
-    pt.x = e.clientX;
-    pt.y = e.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    const svgElement = e.currentTarget.ownerSVGElement;
+    if (!svgElement) return;
 
     // Store initial state
     const committedSize = committedSizes.get(image.id);
@@ -278,11 +271,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
     setResizingImageId(image.id);
     setResizeStartSize(currentSize);
-    setResizeStartPos({ x: svgP.x, y: svgP.y });
     setResizeCorner(corner);
     setResizeAnchor({ x: anchorX, y: anchorY });
     setResizeStartImagePos({ x: currentX, y: currentY });
-    setResizeStartImageSize({ width: imageWidth, height: imageHeight });
     setResizeDelta(0);
     setResizePositionDelta({ x: 0, y: 0 });
   };
@@ -353,11 +344,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     if (!resizingImageId || !onUpdateImage) {
       setResizingImageId(null);
       setResizeStartSize(1.0);
-      setResizeStartPos({ x: 0, y: 0 });
       setResizeCorner(null);
       setResizeAnchor({ x: 0, y: 0 });
       setResizeStartImagePos({ x: 0, y: 0 });
-      setResizeStartImageSize({ width: 0, height: 0 });
       setResizeDelta(0);
       setResizePositionDelta({ x: 0, y: 0 });
       return;
@@ -391,11 +380,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     // Reset resize state immediately (committed values will keep the display)
     setResizingImageId(null);
     setResizeStartSize(1.0);
-    setResizeStartPos({ x: 0, y: 0 });
     setResizeCorner(null);
     setResizeAnchor({ x: 0, y: 0 });
     setResizeStartImagePos({ x: 0, y: 0 });
-    setResizeStartImageSize({ width: 0, height: 0 });
     setResizeDelta(0);
     setResizePositionDelta({ x: 0, y: 0 });
 
@@ -404,20 +391,20 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   };
 
   // Crop handlers
-  const handleCropStart = (e: React.MouseEvent, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
+  const handleCropStart = (e: React.MouseEvent<SVGRectElement>, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
     // Disable crop in fullscreen mode (read-only)
     if (isFullscreen) return;
 
     e.preventDefault();
     e.stopPropagation();
 
-    const svg = e.currentTarget.ownerSVGElement;
-    if (!svg) return;
+    const svgElement = e.currentTarget.ownerSVGElement;
+    if (!svgElement) return;
 
-    const pt = svg.createSVGPoint();
+    const pt = svgElement.createSVGPoint();
     pt.x = e.clientX;
     pt.y = e.clientY;
-    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+    const svgP = pt.matrixTransform(svgElement.getScreenCTM()?.inverse());
 
     setCroppingImageId(image.id);
     setCropEdge(edge);

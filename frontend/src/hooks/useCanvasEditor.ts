@@ -102,7 +102,7 @@ export function useCanvasEditor(canvasId: number) {
 
       return { previousImages };
     },
-    onError: (error, variables, context) => {
+    onError: (error, _variables, context) => {
       // Rollback on error
       if (context?.previousImages) {
         queryClient.setQueryData(['canvas', canvasId, 'images'], context.previousImages);

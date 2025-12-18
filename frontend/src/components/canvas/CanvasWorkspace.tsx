@@ -22,8 +22,10 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   // Resize state
   const [resizingImageId, setResizingImageId] = useState<number | null>(null);
   const [resizeStartSize, setResizeStartSize] = useState<number>(1.0);
-  const [resizeStartDistance, setResizeStartDistance] = useState<number>(0);
-  const [resizeStartCenter, setResizeStartCenter] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [resizeStartPos, setResizeStartPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [resizeCorner, setResizeCorner] = useState<'nw' | 'ne' | 'sw' | 'se' | null>(null);
+  const [resizeStartImagePos, setResizeStartImagePos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const [resizeStartImageSize, setResizeStartImageSize] = useState<{ width: number; height: number }>({ width: 0, height: 0 });
   const [resizeDelta, setResizeDelta] = useState<number>(0);
   const [committedSizes, setCommittedSizes] = useState<Map<number, number>>(new Map());
 
@@ -40,14 +42,22 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   const canvasWidth = canvas?.width || 1920;
   const canvasHeight = canvas?.height || 1080;
 
-  // コンテナの横幅いっぱいに Canvas を表示するスケールを計算
+  // コンテナの横幅いっぱいに Canvas を表示するスケールを計算（縦幅は800pxまで）
   useEffect(() => {
     if (!canvasContainerRef.current || isFullscreen) return;
 
     const updateScale = () => {
       if (!canvasContainerRef.current) return;
       const containerWidth = canvasContainerRef.current.clientWidth;
-      const calculatedScale = containerWidth / canvasWidth;
+      const maxHeight = 800; // 縦幅の最大値
+
+      // 横幅基準のスケール
+      const scaleByWidth = containerWidth / canvasWidth;
+      // 縦幅基準のスケール（800pxを超えないように）
+      const scaleByHeight = maxHeight / canvasHeight;
+
+      // より小さい方のスケールを採用（両方の制限を満たす）
+      const calculatedScale = Math.min(scaleByWidth, scaleByHeight);
       setScale(calculatedScale);
     };
 
@@ -56,7 +66,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     // ウィンドウリサイズ時も再計算
     window.addEventListener('resize', updateScale);
     return () => window.removeEventListener('resize', updateScale);
-  }, [canvasWidth, isFullscreen]);
+  }, [canvasWidth, canvasHeight, isFullscreen]);
 
   // フルスクリーン表示
   const enterFullscreen = async () => {
@@ -223,28 +233,23 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     pt.y = e.clientY;
     const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
 
-    // Calculate center point of the image (use current display size)
+    // Store initial state
     const committedSize = committedSizes.get(image.id);
     const currentSize = committedSize || image.size || 1.0;
     const imageWidth = (image.width || 0) * currentSize;
     const imageHeight = (image.height || 0) * currentSize;
-    const centerX = (image.x || 0) + imageWidth / 2;
-    const centerY = (image.y || 0) + imageHeight / 2;
-
-    // Calculate initial distance from center to mouse
-    const dx = svgP.x - centerX;
-    const dy = svgP.y - centerY;
-    const distance = Math.sqrt(dx * dx + dy * dy);
 
     setResizingImageId(image.id);
     setResizeStartSize(currentSize);
-    setResizeStartDistance(distance);
-    setResizeStartCenter({ x: centerX, y: centerY });
+    setResizeStartPos({ x: svgP.x, y: svgP.y });
+    setResizeCorner(corner);
+    setResizeStartImagePos({ x: image.x || 0, y: image.y || 0 });
+    setResizeStartImageSize({ width: imageWidth, height: imageHeight });
     setResizeDelta(0);
   };
 
   const handleResizeMove = (e: React.MouseEvent<SVGSVGElement>) => {
-    if (!resizingImageId) return;
+    if (!resizingImageId || !resizeCorner) return;
 
     const svg = e.currentTarget;
     const pt = svg.createSVGPoint();
@@ -252,14 +257,46 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     pt.y = e.clientY;
     const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
 
-    // Use fixed center point from resize start
-    const dx = svgP.x - resizeStartCenter.x;
-    const dy = svgP.y - resizeStartCenter.y;
-    const currentDistance = Math.sqrt(dx * dx + dy * dy);
+    // Calculate handle movement
+    const deltaX = svgP.x - resizeStartPos.x;
+    const deltaY = svgP.y - resizeStartPos.y;
 
-    // Calculate size delta based on distance change
-    const distanceRatio = currentDistance / resizeStartDistance;
-    const newSize = resizeStartSize * distanceRatio;
+    // Calculate new size based on which corner is being dragged
+    let newWidth = resizeStartImageSize.width;
+    let newHeight = resizeStartImageSize.height;
+
+    switch (resizeCorner) {
+      case 'se': // South-East (bottom-right)
+        newWidth = resizeStartImageSize.width + deltaX;
+        newHeight = resizeStartImageSize.height + deltaY;
+        break;
+      case 'sw': // South-West (bottom-left)
+        newWidth = resizeStartImageSize.width - deltaX;
+        newHeight = resizeStartImageSize.height + deltaY;
+        break;
+      case 'ne': // North-East (top-right)
+        newWidth = resizeStartImageSize.width + deltaX;
+        newHeight = resizeStartImageSize.height - deltaY;
+        break;
+      case 'nw': // North-West (top-left)
+        newWidth = resizeStartImageSize.width - deltaX;
+        newHeight = resizeStartImageSize.height - deltaY;
+        break;
+    }
+
+    // Maintain aspect ratio - use the larger relative change
+    const image = images.find(img => img.id === resizingImageId);
+    if (!image) return;
+
+    const originalWidth = image.width || 0;
+    const originalHeight = image.height || 0;
+
+    const widthRatio = newWidth / (originalWidth * resizeStartSize);
+    const heightRatio = newHeight / (originalHeight * resizeStartSize);
+
+    // Use average of both ratios for smooth scaling
+    const sizeRatio = (widthRatio + heightRatio) / 2;
+    const newSize = resizeStartSize * sizeRatio;
     const delta = newSize - resizeStartSize;
 
     setResizeDelta(delta);
@@ -269,8 +306,10 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     if (!resizingImageId || !onUpdateImage) {
       setResizingImageId(null);
       setResizeStartSize(1.0);
-      setResizeStartDistance(0);
-      setResizeStartCenter({ x: 0, y: 0 });
+      setResizeStartPos({ x: 0, y: 0 });
+      setResizeCorner(null);
+      setResizeStartImagePos({ x: 0, y: 0 });
+      setResizeStartImageSize({ width: 0, height: 0 });
       setResizeDelta(0);
       return;
     }
@@ -292,8 +331,10 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     // Reset resize state immediately (committed size will keep the display)
     setResizingImageId(null);
     setResizeStartSize(1.0);
-    setResizeStartDistance(0);
-    setResizeStartCenter({ x: 0, y: 0 });
+    setResizeStartPos({ x: 0, y: 0 });
+    setResizeCorner(null);
+    setResizeStartImagePos({ x: 0, y: 0 });
+    setResizeStartImageSize({ width: 0, height: 0 });
     setResizeDelta(0);
   };
 
@@ -469,7 +510,10 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
       {/* SVG Canvas */}
       <div
         ref={canvasContainerRef}
-        className={isFullscreen ? 'bg-black overflow-auto w-full h-full flex items-center justify-center' : 'w-full bg-white overflow-auto'}
+        className={isFullscreen ? 'bg-black overflow-auto w-full h-full flex items-center justify-center' : 'w-full overflow-auto'}
+        style={isFullscreen ? {} : {
+          background: 'repeating-conic-gradient(#e5e7eb 0% 25%, transparent 0% 50%) 50% / 20px 20px'
+        }}
       >
         <svg
           width={isFullscreen ? '100%' : '100%'}
@@ -486,18 +530,34 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
               ? 'nwse-resize'
               : draggingImageId
               ? 'grabbing'
-              : 'default'
+              : 'default',
+            overflow: 'visible'
           }}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseUp}
         >
+          {/* Clip path for canvas boundaries */}
+          <defs>
+            <clipPath id="canvas-bounds">
+              <rect
+                x={0}
+                y={0}
+                width={canvasWidth}
+                height={canvasHeight}
+              />
+            </clipPath>
+          </defs>
+
           {/* Background rect */}
           <rect
             width={canvasWidth}
             height={canvasHeight}
             fill="white"
           />
+
+          {/* Group for all images with clipping */}
+          <g clipPath="url(#canvas-bounds)">
 
           {/* Render images */}
           {images.map((image) => {
@@ -552,9 +612,10 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
             // Check if hovered
             const isHovered = hoveredImageId === image.id;
 
-            // Calculate handle size based on canvas scale (to keep consistent screen size)
-            // In normal view, canvas width fits container, so handle should be proportional
-            const handleSize = isFullscreen ? 16 : (canvasWidth / 100); // ~19px for 1920px canvas
+            // Calculate handle size based on display size (not canvas size)
+            // Use larger dimension for consistent handle size across different canvas sizes
+            const displaySize = Math.max(canvasWidth, canvasHeight);
+            const handleSize = isFullscreen ? 16 : (displaySize / 100); // ~19px for 1920px
 
             return (
               <g key={image.id}>
@@ -710,6 +771,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
               </g>
             );
           })}
+          </g>
         </svg>
       </div>
 

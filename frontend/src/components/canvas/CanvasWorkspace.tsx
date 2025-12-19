@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type PointerEvent } from 'react';
+import { useState, useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
 import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {
@@ -565,7 +565,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     }
   }, [isFullscreen]);
 
-  const handleCanvasClick = (e: React.MouseEvent<HTMLDivElement>) => {
+  const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
     // Clear selection when clicking on canvas background (not on an image)
     if (e.target === e.currentTarget) {
       setSelectedImageId(null);

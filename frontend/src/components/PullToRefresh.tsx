@@ -80,12 +80,11 @@ export function PullToRefresh({ onRefresh, children, disabled = false }: PullToR
     document.addEventListener('touchend', handleTouchEnd, { passive: true, capture: true });
 
     return () => {
-      // @ts-expect-error - removeEventListener accepts capture option
-      document.removeEventListener('touchstart', handleTouchStart, { capture: true });
-      // @ts-expect-error - removeEventListener accepts capture option
-      document.removeEventListener('touchmove', handleTouchMove, { capture: true });
-      // @ts-expect-error - removeEventListener accepts capture option
-      document.removeEventListener('touchend', handleTouchEnd, { capture: true });
+      // Note: TypeScript types don't include capture option for removeEventListener,
+      // but it's supported by all modern browsers
+      document.removeEventListener('touchstart', handleTouchStart);
+      document.removeEventListener('touchmove', handleTouchMove);
+      document.removeEventListener('touchend', handleTouchEnd);
     };
   }, [pullDistance, isRefreshing, onRefresh, disabled]);
 

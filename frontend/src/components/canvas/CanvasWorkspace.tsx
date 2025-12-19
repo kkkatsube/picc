@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type MouseEvent } from 'react';
+import { useState, useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
 import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {
@@ -39,6 +39,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
 
   // Hover state
   const [hoveredImageId, setHoveredImageId] = useState<number | null>(null);
+
+  // Selected state (for touch devices - persists after tap)
+  const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
 
   const canvasWidth = canvas?.width || 1920;
   const canvasHeight = canvas?.height || 1080;
@@ -120,11 +123,15 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   }, [isFullscreen]);
 
   // Image drag handlers
-  const handleImageMouseDown = (e: MouseEvent<SVGImageElement>, image: CanvasImage) => {
+  const handleImagePointerDown = (e: PointerEvent<SVGImageElement>, image: CanvasImage) => {
     // Disable drag in fullscreen mode (read-only)
     if (isFullscreen) return;
 
     e.preventDefault();
+
+    // Set selected image for touch devices (persists to show handles)
+    setSelectedImageId(image.id);
+
     const svg = e.currentTarget.ownerSVGElement;
     if (!svg) return;
 
@@ -138,21 +145,24 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setDragOffset({ x: 0, y: 0 });
   };
 
-  const handleMouseMove = (e: MouseEvent<SVGSVGElement>) => {
+  const handlePointerMove = (e: PointerEvent<SVGSVGElement>) => {
     // Handle crop
     if (croppingImageId) {
+      e.preventDefault(); // Prevent scrolling during crop
       handleCropMove(e);
       return;
     }
 
     // Handle resize
     if (resizingImageId) {
+      e.preventDefault(); // Prevent scrolling during resize
       handleResizeMove(e);
       return;
     }
 
     // Handle drag
     if (!draggingImageId || !dragStartPos) return;
+    e.preventDefault(); // Prevent scrolling during drag
 
     const svg = e.currentTarget;
     const pt = svg.createSVGPoint();
@@ -166,7 +176,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     });
   };
 
-  const handleMouseUp = () => {
+  const handlePointerUp = () => {
     // Handle crop end
     if (croppingImageId) {
       handleCropEnd();
@@ -239,12 +249,15 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   }, [isUpdatingImage, committedOffsets.size, committedSizes.size, committedPositions.size, committedCrops.size]);
 
   // Resize handlers
-  const handleResizeStart = (e: MouseEvent<SVGRectElement>, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
+  const handleResizeStart = (e: PointerEvent<SVGRectElement>, image: CanvasImage, corner: 'nw' | 'ne' | 'sw' | 'se') => {
     // Disable resize in fullscreen mode (read-only)
     if (isFullscreen) return;
 
     e.preventDefault();
     e.stopPropagation();
+
+    // Maintain selection when starting resize
+    setSelectedImageId(image.id);
 
     const svgElement = e.currentTarget.ownerSVGElement;
     if (!svgElement) return;
@@ -290,7 +303,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setResizePositionDelta({ x: 0, y: 0 });
   };
 
-  const handleResizeMove = (e: MouseEvent<SVGSVGElement>) => {
+  const handleResizeMove = (e: PointerEvent<SVGSVGElement>) => {
     if (!resizingImageId || !resizeCorner) return;
 
     const svg = e.currentTarget;
@@ -403,12 +416,15 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   };
 
   // Crop handlers
-  const handleCropStart = (e: MouseEvent<SVGRectElement>, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
+  const handleCropStart = (e: PointerEvent<SVGRectElement>, image: CanvasImage, edge: 'top' | 'bottom' | 'left' | 'right') => {
     // Disable crop in fullscreen mode (read-only)
     if (isFullscreen) return;
 
     e.preventDefault();
     e.stopPropagation();
+
+    // Maintain selection when starting crop
+    setSelectedImageId(image.id);
 
     const svgElement = e.currentTarget.ownerSVGElement;
     if (!svgElement) return;
@@ -424,7 +440,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     setCropDelta(0);
   };
 
-  const handleCropMove = (e: MouseEvent<SVGSVGElement>) => {
+  const handleCropMove = (e: PointerEvent<SVGSVGElement>) => {
     if (!croppingImageId || !cropEdge) return;
 
     const image = images.find((img) => img.id === croppingImageId);
@@ -549,7 +565,12 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     }
   }, [isFullscreen]);
 
-  const handleCanvasClick = () => {
+  const handleCanvasClick = (e: MouseEvent<HTMLDivElement>) => {
+    // Clear selection when clicking on canvas background (not on an image)
+    if (e.target === e.currentTarget) {
+      setSelectedImageId(null);
+    }
+
     if (isFullscreen) {
       exitFullscreen();
     }
@@ -638,11 +659,12 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
               : draggingImageId
               ? 'grabbing'
               : 'default',
-            overflow: 'visible'
+            overflow: 'visible',
+            touchAction: 'none' // Prevent all default touch behaviors (scrolling, zooming, etc.)
           }}
-          onMouseMove={handleMouseMove}
-          onMouseUp={handleMouseUp}
-          onMouseLeave={handleMouseUp}
+          onPointerMove={handlePointerMove}
+          onPointerUp={handlePointerUp}
+          onPointerLeave={handlePointerUp}
         >
           {/* Clip path for canvas boundaries */}
           <defs>
@@ -724,13 +746,17 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
               }
             }
 
-            // Check if hovered
+            // Check if hovered or selected (for touch devices)
             const isHovered = hoveredImageId === image.id;
+            const isSelected = selectedImageId === image.id;
 
             // Calculate handle size based on display size (not canvas size)
             // Use larger dimension for consistent handle size across different canvas sizes
+            // Detect touch device and use larger handles for better touch target
+            const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
             const displaySize = Math.max(canvasWidth, canvasHeight);
-            const handleSize = isFullscreen ? 16 : (displaySize / 100); // ~19px for 1920px
+            const baseHandleSize = displaySize / 100; // ~19px for 1920px
+            const handleSize = isFullscreen ? 16 : (isTouchDevice ? baseHandleSize * 2 : baseHandleSize);
 
             return (
               <g key={image.id}>
@@ -767,15 +793,28 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                     opacity: isDragging || isResizing || isCropping ? 0.7 : 1
                   }}
                   preserveAspectRatio="none"
-                  onMouseDown={(e) => handleImageMouseDown(e, image)}
-                  onMouseEnter={() => setHoveredImageId(image.id)}
-                  onMouseLeave={() => setHoveredImageId(null)}
+                  onPointerDown={(e) => handleImagePointerDown(e, image)}
+                  onPointerEnter={() => setHoveredImageId(image.id)}
+                  onPointerLeave={() => setHoveredImageId(null)}
                 />
 
-                {/* Resize handles - show on hover (hide when any operation is active or in fullscreen) */}
-                {!isFullscreen && isHovered && !isDragging && !isResizing && !isCropping && (
+                {/* Resize handles - show on hover or selected (hide when any operation is active or in fullscreen) */}
+                {!isFullscreen && (isHovered || isSelected) && !isDragging && !isResizing && !isCropping && (
                   <>
                     {/* Top-left corner */}
+                    {/* Invisible larger touch target - extends both outside and inside the image */}
+                    {isTouchDevice && (
+                      <rect
+                        x={(displayX * renderScale) - handleSize * 4}
+                        y={(displayY * renderScale) - handleSize * 4}
+                        width={handleSize * 8}
+                        height={handleSize * 8}
+                        fill="transparent"
+                        style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                        onPointerDown={(e) => handleResizeStart(e, image, 'nw')}
+                      />
+                    )}
+                    {/* Visible handle */}
                     <rect
                       x={(displayX * renderScale) - handleSize / 2}
                       y={(displayY * renderScale) - handleSize / 2}
@@ -784,11 +823,24 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       fill="white"
                       stroke="#3B82F6"
                       strokeWidth={handleSize / 8}
-                      style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleResizeStart(e, image, 'nw')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      style={{ cursor: 'nwse-resize', pointerEvents: isTouchDevice ? 'none' : 'auto' }}
+                      onPointerDown={(e) => handleResizeStart(e, image, 'nw')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Top-right corner */}
+                    {/* Invisible larger touch target - extends both outside and inside the image */}
+                    {isTouchDevice && (
+                      <rect
+                        x={(displayX + imageWidth * imageSize) * renderScale - handleSize * 4}
+                        y={(displayY * renderScale) - handleSize * 4}
+                        width={handleSize * 8}
+                        height={handleSize * 8}
+                        fill="transparent"
+                        style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
+                        onPointerDown={(e) => handleResizeStart(e, image, 'ne')}
+                      />
+                    )}
+                    {/* Visible handle */}
                     <rect
                       x={(displayX + imageWidth * imageSize) * renderScale - handleSize / 2}
                       y={(displayY * renderScale) - handleSize / 2}
@@ -797,11 +849,24 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       fill="white"
                       stroke="#3B82F6"
                       strokeWidth={handleSize / 8}
-                      style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleResizeStart(e, image, 'ne')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      style={{ cursor: 'nesw-resize', pointerEvents: isTouchDevice ? 'none' : 'auto' }}
+                      onPointerDown={(e) => handleResizeStart(e, image, 'ne')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Bottom-left corner */}
+                    {/* Invisible larger touch target - extends both outside and inside the image */}
+                    {isTouchDevice && (
+                      <rect
+                        x={(displayX * renderScale) - handleSize * 4}
+                        y={(displayY + imageHeight * imageSize) * renderScale - handleSize * 4}
+                        width={handleSize * 8}
+                        height={handleSize * 8}
+                        fill="transparent"
+                        style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
+                        onPointerDown={(e) => handleResizeStart(e, image, 'sw')}
+                      />
+                    )}
+                    {/* Visible handle */}
                     <rect
                       x={(displayX * renderScale) - handleSize / 2}
                       y={(displayY + imageHeight * imageSize) * renderScale - handleSize / 2}
@@ -810,11 +875,24 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       fill="white"
                       stroke="#3B82F6"
                       strokeWidth={handleSize / 8}
-                      style={{ cursor: 'nesw-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleResizeStart(e, image, 'sw')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      style={{ cursor: 'nesw-resize', pointerEvents: isTouchDevice ? 'none' : 'auto' }}
+                      onPointerDown={(e) => handleResizeStart(e, image, 'sw')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Bottom-right corner */}
+                    {/* Invisible larger touch target - extends both outside and inside the image */}
+                    {isTouchDevice && (
+                      <rect
+                        x={(displayX + imageWidth * imageSize) * renderScale - handleSize * 4}
+                        y={(displayY + imageHeight * imageSize) * renderScale - handleSize * 4}
+                        width={handleSize * 8}
+                        height={handleSize * 8}
+                        fill="transparent"
+                        style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
+                        onPointerDown={(e) => handleResizeStart(e, image, 'se')}
+                      />
+                    )}
+                    {/* Visible handle */}
                     <rect
                       x={(displayX + imageWidth * imageSize) * renderScale - handleSize / 2}
                       y={(displayY + imageHeight * imageSize) * renderScale - handleSize / 2}
@@ -823,9 +901,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       fill="white"
                       stroke="#3B82F6"
                       strokeWidth={handleSize / 8}
-                      style={{ cursor: 'nwse-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleResizeStart(e, image, 'se')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      style={{ cursor: 'nwse-resize', pointerEvents: isTouchDevice ? 'none' : 'auto' }}
+                      onPointerDown={(e) => handleResizeStart(e, image, 'se')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
 
                     {/* Edge handles for cropping */}
@@ -839,8 +917,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       stroke="#10B981"
                       strokeWidth={handleSize / 8}
                       style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleCropStart(e, image, 'top')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      onPointerDown={(e) => handleCropStart(e, image, 'top')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Bottom edge */}
                     <rect
@@ -852,8 +930,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       stroke="#10B981"
                       strokeWidth={handleSize / 8}
                       style={{ cursor: 'ns-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleCropStart(e, image, 'bottom')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      onPointerDown={(e) => handleCropStart(e, image, 'bottom')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Left edge */}
                     <rect
@@ -865,8 +943,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       stroke="#10B981"
                       strokeWidth={handleSize / 8}
                       style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleCropStart(e, image, 'left')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      onPointerDown={(e) => handleCropStart(e, image, 'left')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                     {/* Right edge */}
                     <rect
@@ -878,8 +956,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
                       stroke="#10B981"
                       strokeWidth={handleSize / 8}
                       style={{ cursor: 'ew-resize', pointerEvents: 'auto' }}
-                      onMouseDown={(e) => handleCropStart(e, image, 'right')}
-                      onMouseEnter={() => setHoveredImageId(image.id)}
+                      onPointerDown={(e) => handleCropStart(e, image, 'right')}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
                     />
                   </>
                 )}

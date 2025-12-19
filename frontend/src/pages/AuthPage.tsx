@@ -62,9 +62,12 @@ export default function AuthPage() {
 
   return (
     <>
-      {/* エラー表示 */}
+      {/* エラー表示 - with safe area support for PWA */}
       {error && (
-        <div className="fixed top-4 left-4 right-4 z-50 mx-auto max-w-md">
+        <div
+          className="fixed left-4 right-4 z-50 mx-auto max-w-md"
+          style={{ top: 'calc(1rem + env(safe-area-inset-top))' }}
+        >
           <div className="bg-red-50 border border-red-200 rounded-md p-4">
             <div className="flex">
               <div className="flex-shrink-0">

@@ -69,26 +69,38 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     return () => window.removeEventListener('resize', updateScale);
   }, [canvasWidth, canvasHeight, isFullscreen]);
 
-  // フルスクリーン表示
+  // フルスクリーン表示（iOS対応: 疑似フルスクリーン）
   const enterFullscreen = async () => {
     if (!canvasContainerRef.current) return;
 
-    try {
-      await canvasContainerRef.current.requestFullscreen();
-      setIsFullscreen(true);
-    } catch (err) {
-      console.error('Failed to enter fullscreen:', err);
+    // フルスクリーンAPI対応チェック（PCブラウザなど）
+    if (canvasContainerRef.current.requestFullscreen) {
+      try {
+        await canvasContainerRef.current.requestFullscreen();
+        setIsFullscreen(true);
+        return;
+      } catch (err) {
+        console.error('Failed to enter fullscreen:', err);
+      }
     }
+
+    // iOS/非対応ブラウザ: 疑似フルスクリーン
+    setIsFullscreen(true);
+  };
+
+  // フルスクリーン解除
+  const exitFullscreen = () => {
+    if (document.fullscreenElement) {
+      document.exitFullscreen();
+    }
+    setIsFullscreen(false);
   };
 
   // Esc キーでフルスクリーン解除
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (e.key === 'Escape' && isFullscreen) {
-        if (document.fullscreenElement) {
-          document.exitFullscreen();
-        }
-        setIsFullscreen(false);
+        exitFullscreen();
       }
     };
 
@@ -525,16 +537,38 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
   };
   */
 
+  // Prevent body scroll in pseudo-fullscreen and add class for PullToRefresh detection
+  useEffect(() => {
+    if (isFullscreen) {
+      document.body.style.overflow = 'hidden';
+      document.body.classList.add('fullscreen-active');
+      return () => {
+        document.body.style.overflow = '';
+        document.body.classList.remove('fullscreen-active');
+      };
+    }
+  }, [isFullscreen]);
+
+  const handleCanvasClick = () => {
+    if (isFullscreen) {
+      exitFullscreen();
+    }
+  };
+
   return (
-    <div className="bg-white shadow rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-        <h3 className="text-lg font-semibold">Canvas Workspace</h3>
-        <button
-          onClick={enterFullscreen}
-          className="inline-flex items-center px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-800 transition-colors"
-          title="Fullscreen (Press ESC to exit)"
-        >
+    <div className={isFullscreen && !document.fullscreenElement
+      ? "fixed inset-0 z-50 bg-black"
+      : "bg-white shadow rounded-lg overflow-hidden"}>
+      {/* Header - hide in pseudo-fullscreen */}
+      {!(isFullscreen && !document.fullscreenElement) && (
+        <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
+          <h3 className="text-lg font-semibold">Canvas Workspace</h3>
+          {/* Fullscreen/Exit button */}
+          <button
+            onClick={isFullscreen ? exitFullscreen : enterFullscreen}
+            className="inline-flex items-center px-3 py-2 bg-gray-700 text-white text-sm rounded hover:bg-gray-800 transition-colors"
+            title={isFullscreen ? "Exit Fullscreen (Press ESC)" : "Fullscreen (Press ESC to exit)"}
+          >
           <svg
             className="h-4 w-4 mr-1"
             xmlns="http://www.w3.org/2000/svg"
@@ -542,14 +576,25 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
             viewBox="0 0 24 24"
             stroke="currentColor"
           >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
-            />
+            {isFullscreen ? (
+              // Exit fullscreen icon
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M9 9V4.5M9 9H4.5M9 9L3.75 3.75M9 15v4.5M9 15H4.5M9 15l-5.25 5.25M15 9h4.5M15 9V4.5M15 9l5.25-5.25M15 15h4.5M15 15v4.5m0-4.5l5.25 5.25"
+              />
+            ) : (
+              // Enter fullscreen icon
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M4 8V4m0 0h4M4 4l5 5m11-1V4m0 0h-4m4 0l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5l-5-5m5 5v-4m0 4h-4"
+              />
+            )}
           </svg>
-          Fullscreen
+          {isFullscreen ? 'Exit Fullscreen' : 'Fullscreen'}
         </button>
         {/* 将来的な機能拡張用（Scale コントロール）
         <div className="flex items-center space-x-4">
@@ -562,20 +607,26 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
         </div>
         */}
       </div>
+      )}
 
       {/* SVG Canvas */}
       <div
         ref={canvasContainerRef}
-        className={isFullscreen ? 'bg-black overflow-auto w-full h-full flex items-center justify-center' : 'w-full overflow-auto'}
-        style={isFullscreen ? {} : {
+        className={isFullscreen && !document.fullscreenElement
+          ? 'bg-black w-screen h-screen flex items-start justify-center overflow-y-auto'
+          : isFullscreen
+          ? 'bg-black overflow-auto w-full h-full flex items-center justify-center'
+          : 'w-full overflow-auto'}
+        style={!isFullscreen ? {
           background: 'repeating-conic-gradient(#e5e7eb 0% 25%, transparent 0% 50%) 50% / 20px 20px'
-        }}
+        } : {}}
+        onClick={handleCanvasClick}
       >
         <svg
-          width={isFullscreen ? '100%' : '100%'}
-          height={isFullscreen ? '100%' : canvasHeight * scale}
+          width={isFullscreen ? '100vw' : '100%'}
+          height={isFullscreen ? 'auto' : canvasHeight * scale}
           viewBox={`0 0 ${canvasWidth} ${canvasHeight}`}
-          preserveAspectRatio="xMidYMid meet"
+          preserveAspectRatio={isFullscreen && !document.fullscreenElement ? "xMinYMin meet" : "xMidYMid meet"}
           style={{
             display: 'block',
             cursor: isFullscreen

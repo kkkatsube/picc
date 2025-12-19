@@ -4,7 +4,8 @@ import { ApiError } from '../api/core/ApiError';
 import type { LoginRequest, RegisterRequest, AuthResponse, UserResponse } from '../api';
 
 // OpenAPI設定（ベースURL）
-OpenAPI.BASE = 'http://localhost:8000/api';
+// 開発環境では相対パスを使用（Viteプロキシ経由）
+OpenAPI.BASE = '/api';
 
 export interface AuthError {
   message: string;

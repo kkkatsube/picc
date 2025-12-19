@@ -1,7 +1,8 @@
 import { PlusIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../stores/authStore';
-import { Counter } from '../components/counter';
+// Counter component - kept for reference but hidden from UI
+// import { Counter } from '../components/counter';
 import { useCanvases } from '../hooks/useCanvases';
 
 export default function DashboardPage() {
@@ -37,10 +38,10 @@ export default function DashboardPage() {
                 Welcome, <span className="font-medium">{user?.name}</span>
               </div>
 
-              {/* Counter Component */}
-              <div className="border-l border-gray-300 pl-6">
+              {/* Counter Component - Hidden but kept for reference */}
+              {/* <div className="border-l border-gray-300 pl-6">
                 <Counter />
-              </div>
+              </div> */}
 
               <button
                 onClick={handleLogout}

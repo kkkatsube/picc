@@ -10,6 +10,8 @@ interface FavoritesCarouselProps {
   onImageAdd: (carouselId: number, imageUrl: string) => void;
   onImageDragStart: (imageUrl: string) => void;
   onImageReorder: (carouselId: number, imageIds: number[]) => void;
+  onCarouselDragStart?: (e: React.DragEvent) => void;
+  onCarouselDragEnd?: () => void;
 }
 
 export function FavoritesCarousel({
@@ -20,6 +22,8 @@ export function FavoritesCarousel({
   onImageAdd,
   onImageDragStart,
   onImageReorder,
+  onCarouselDragStart,
+  onCarouselDragEnd,
 }: FavoritesCarouselProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(carousel.name);
@@ -34,45 +38,65 @@ export function FavoritesCarousel({
   };
 
   const handleImageDragStart = (e: React.DragEvent, imageId: number, imageUrl: string) => {
+    console.log('FavoritesCarousel: Image drag start', { imageId, imageUrl });
     setDraggedImageId(imageId);
     e.dataTransfer.effectAllowed = 'copyMove';
     e.dataTransfer.setData('text/plain', imageUrl);
+    console.log('FavoritesCarousel: dataTransfer set', e.dataTransfer.getData('text/plain'));
     onImageDragStart(imageUrl);
   };
 
   const handleImageDragOver = (e: React.DragEvent) => {
     e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
+
+    // If dragging from within this carousel, allow reordering
+    if (draggedImageId) {
+      e.dataTransfer.dropEffect = 'move';
+    } else {
+      // If dragging from outside (local images), allow adding
+      e.dataTransfer.dropEffect = 'copy';
+    }
   };
 
   const handleImageDrop = (e: React.DragEvent, targetImageId: number) => {
     e.preventDefault();
     e.stopPropagation();
 
-    if (!draggedImageId || draggedImageId === targetImageId) {
+    // Check if this is an internal reorder or external add
+    if (draggedImageId) {
+      // Internal reorder: dragging image within this carousel
+      if (draggedImageId === targetImageId) {
+        setDraggedImageId(null);
+        return;
+      }
+
+      const images = carousel.images || [];
+      const draggedIndex = images.findIndex((img) => img.id === draggedImageId);
+      const targetIndex = images.findIndex((img) => img.id === targetImageId);
+
+      if (draggedIndex === -1 || targetIndex === -1) {
+        setDraggedImageId(null);
+        return;
+      }
+
+      // 並び替え
+      const reordered = [...images];
+      const [removed] = reordered.splice(draggedIndex, 1);
+      reordered.splice(targetIndex, 0, removed);
+
+      onImageReorder(
+        carousel.id,
+        reordered.map((img) => img.id)
+      );
       setDraggedImageId(null);
-      return;
+    } else {
+      // External add: dragging from local carousel
+      const imageUrl = e.dataTransfer.getData('text/plain');
+      if (imageUrl) {
+        // Add to the end of carousel, not at drop position
+        onImageAdd(carousel.id, imageUrl);
+      }
     }
-
-    const images = carousel.images || [];
-    const draggedIndex = images.findIndex((img) => img.id === draggedImageId);
-    const targetIndex = images.findIndex((img) => img.id === targetImageId);
-
-    if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggedImageId(null);
-      return;
-    }
-
-    // 並び替え
-    const reordered = [...images];
-    const [removed] = reordered.splice(draggedIndex, 1);
-    reordered.splice(targetIndex, 0, removed);
-
-    onImageReorder(
-      carousel.id,
-      reordered.map((img) => img.id)
-    );
-    setDraggedImageId(null);
   };
 
   const handleImageDragEnd = () => {
@@ -81,13 +105,19 @@ export function FavoritesCarousel({
 
   // Handle drop from local image carousel
   const handleCarouselDragOver = (e: React.DragEvent) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'copy';
-    setIsDragOverCarousel(true);
+    // Only handle if not already handled by child (image)
+    if (!draggedImageId) {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'copy';
+      setIsDragOverCarousel(true);
+    }
   };
 
-  const handleCarouselDragLeave = () => {
-    setIsDragOverCarousel(false);
+  const handleCarouselDragLeave = (e: React.DragEvent) => {
+    // Only clear if leaving the entire carousel container
+    if (e.currentTarget === e.target) {
+      setIsDragOverCarousel(false);
+    }
   };
 
   const handleCarouselDrop = (e: React.DragEvent) => {
@@ -131,7 +161,12 @@ export function FavoritesCarousel({
             </button>
           </div>
         ) : (
-          <div className="flex items-center gap-2">
+          <div
+            className="flex items-center gap-2 flex-1 cursor-move"
+            draggable
+            onDragStart={onCarouselDragStart}
+            onDragEnd={onCarouselDragEnd}
+          >
             <h3 className="text-sm font-medium text-gray-900">⭐ {carousel.name}</h3>
             <button
               onClick={() => setIsEditing(true)}

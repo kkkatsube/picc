@@ -122,12 +122,8 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
       {carousels.map((carousel) => (
         <div
           key={carousel.id}
-          draggable
-          onDragStart={(e) => handleCarouselDragStart(e, carousel.id)}
           onDragOver={handleCarouselDragOver}
           onDrop={(e) => handleCarouselDrop(e, carousel.id)}
-          onDragEnd={handleCarouselDragEnd}
-          className="cursor-move"
         >
           <FavoritesCarousel
             carousel={carousel}
@@ -137,6 +133,8 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
             onImageAdd={handleAddImage}
             onImageDragStart={onImageDragStart}
             onImageReorder={handleReorderImages}
+            onCarouselDragStart={(e) => handleCarouselDragStart(e, carousel.id)}
+            onCarouselDragEnd={handleCarouselDragEnd}
           />
         </div>
       ))}

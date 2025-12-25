@@ -558,6 +558,414 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /favorites/carousels:
+    get:
+      summary: Get All Favorites Carousels
+      description: ユーザーのお気に入りカルーセル一覧取得
+      operationId: getFavoritesCarousels
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      responses:
+        '200':
+          description: Carousels retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FavoritesCarousel'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Create Favorites Carousel
+      description: お気に入りカルーセル作成
+      operationId: createFavoritesCarousel
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: "背景素材"
+              required:
+                - name
+      responses:
+        '201':
+          description: Carousel created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesCarousel'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /favorites/carousels/{id}:
+    get:
+      summary: Get Favorites Carousel
+      description: お気に入りカルーセル詳細取得
+      operationId: getFavoritesCarousel
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Carousel retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesCarousel'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    put:
+      summary: Update Favorites Carousel
+      description: お気に入りカルーセル更新
+      operationId: updateFavoritesCarousel
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  maxLength: 255
+                  example: "背景素材（更新）"
+              required:
+                - name
+      responses:
+        '200':
+          description: Carousel updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesCarousel'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+    delete:
+      summary: Delete Favorites Carousel
+      description: お気に入りカルーセル削除
+      operationId: deleteFavoritesCarousel
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Carousel deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /favorites/carousels/reorder:
+    put:
+      summary: Reorder Favorites Carousels
+      description: お気に入りカルーセルの並び替え
+      operationId: reorderFavoritesCarousels
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                carousel_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example: [3, 1, 2]
+              required:
+                - carousel_ids
+      responses:
+        '200':
+          description: Carousels reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /favorites/carousels/{carouselId}/images:
+    get:
+      summary: Get Carousel Images
+      description: カルーセル内の画像一覧取得
+      operationId: getCarouselImages
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: carouselId
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Images retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FavoritesImage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    post:
+      summary: Add Image to Carousel
+      description: カルーセルに画像追加
+      operationId: addImageToCarousel
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: carouselId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image_url:
+                  type: string
+                  format: uri
+                  maxLength: 2048
+                  example: "http://localhost:4000/images/sample.jpg"
+              required:
+                - image_url
+      responses:
+        '201':
+          description: Image added successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FavoritesImage'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
+  /favorites/images/{id}:
+    delete:
+      summary: Delete Favorites Image
+      description: お気に入り画像削除
+      operationId: deleteFavoritesImage
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Image deleted successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Image not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /favorites/carousels/{carouselId}/images/reorder:
+    put:
+      summary: Reorder Carousel Images
+      description: カルーセル内画像の並び替え
+      operationId: reorderCarouselImages
+      tags:
+        - Favorites
+      security:
+        - sanctumAuth: []
+      parameters:
+        - name: carouselId
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                image_ids:
+                  type: array
+                  items:
+                    type: integer
+                  example: [5, 3, 1, 2, 4]
+              required:
+                - image_ids
+      responses:
+        '200':
+          description: Images reordered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '404':
+          description: Carousel not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+        '422':
+          description: Validation Error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+
 components:
   securitySchemes:
     sanctumAuth:
@@ -1019,6 +1427,73 @@ components:
       required:
         - data
 
+    FavoritesCarousel:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        user_id:
+          type: integer
+          example: 1
+        name:
+          type: string
+          example: "背景素材"
+        order:
+          type: integer
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-26T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-12-26T00:00:00Z"
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/FavoritesImage'
+      required:
+        - id
+        - user_id
+        - name
+        - order
+        - created_at
+        - updated_at
+
+    FavoritesImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        carousel_id:
+          type: integer
+          example: 1
+        image_url:
+          type: string
+          format: uri
+          example: "http://localhost:4000/images/sample.jpg"
+        order:
+          type: integer
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          example: "2025-12-26T00:00:00Z"
+        updated_at:
+          type: string
+          format: date-time
+          example: "2025-12-26T00:00:00Z"
+      required:
+        - id
+        - carousel_id
+        - image_url
+        - order
+        - created_at
+        - updated_at
+
 tags:
   - name: System
     description: システム関連のエンドポイント
@@ -1030,3 +1505,5 @@ tags:
     description: キャンバス関連のエンドポイント
   - name: CanvasImage
     description: キャンバス画像関連のエンドポイント
+  - name: Favorites
+    description: お気に入りカルーセル・画像関連のエンドポイント

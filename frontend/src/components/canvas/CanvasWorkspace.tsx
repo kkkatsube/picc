@@ -5,13 +5,17 @@ interface CanvasWorkspaceProps {
   canvas: Canvas | undefined;
   images: CanvasImage[];
   onUpdateImage?: (imageId: number, data: UpdateCanvasImageRequest) => void;
+  onAddImage?: (imageUrl: string, x: number, y: number) => void;
   isUpdatingImage?: boolean;
 }
 
-export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isUpdatingImage }: CanvasWorkspaceProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1.0);
   const [isFullscreen, setIsFullscreen] = useState(false);
+
+  // Drag & Drop state for adding images from carousel
+  const [isDragOverCanvas, setIsDragOverCanvas] = useState(false);
 
   // Drag state
   const [draggingImageId, setDraggingImageId] = useState<number | null>(null);
@@ -576,6 +580,57 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
     }
   };
 
+  // Drag & Drop handlers for adding images from carousel
+  const handleCanvasDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOverCanvas(true);
+  };
+
+  const handleCanvasDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    // Only clear if leaving the canvas container itself
+    if (e.currentTarget === e.target) {
+      setIsDragOverCanvas(false);
+    }
+  };
+
+  const handleCanvasDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    setIsDragOverCanvas(false);
+
+    console.log('Canvas drop event triggered');
+
+    if (!onAddImage) {
+      console.warn('onAddImage callback is not provided');
+      return;
+    }
+
+    const imageUrl = e.dataTransfer.getData('text/plain');
+    console.log('Dropped image URL:', imageUrl);
+
+    if (!imageUrl) {
+      console.warn('No image URL in dataTransfer');
+      return;
+    }
+
+    // Get SVG element to convert client coordinates to SVG coordinates
+    const svg = canvasContainerRef.current?.querySelector('svg');
+    if (!svg) {
+      console.error('SVG element not found');
+      return;
+    }
+
+    const pt = svg.createSVGPoint();
+    pt.x = e.clientX;
+    pt.y = e.clientY;
+    const svgP = pt.matrixTransform(svg.getScreenCTM()?.inverse());
+
+    console.log('Drop position (SVG coords):', { x: svgP.x, y: svgP.y });
+
+    // Call onAddImage with image URL and drop position
+    onAddImage(imageUrl, Math.round(svgP.x), Math.round(svgP.y));
+  };
+
   return (
     <div className={isFullscreen && !document.fullscreenElement
       ? "fixed inset-0 z-50 bg-black"
@@ -639,9 +694,14 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, isUpdatingImage
           ? 'bg-black overflow-auto w-full h-full flex items-center justify-center'
           : 'w-full overflow-auto'}
         style={!isFullscreen ? {
-          background: 'repeating-conic-gradient(#e5e7eb 0% 25%, transparent 0% 50%) 50% / 20px 20px'
+          background: isDragOverCanvas
+            ? 'repeating-conic-gradient(#93c5fd 0% 25%, #dbeafe 0% 50%) 50% / 20px 20px'
+            : 'repeating-conic-gradient(#e5e7eb 0% 25%, transparent 0% 50%) 50% / 20px 20px'
         } : {}}
         onClick={handleCanvasClick}
+        onDragOver={handleCanvasDragOver}
+        onDragLeave={handleCanvasDragLeave}
+        onDrop={handleCanvasDrop}
       >
         <svg
           width={isFullscreen ? '100vw' : '100%'}

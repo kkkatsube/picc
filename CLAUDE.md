@@ -141,7 +141,7 @@ picc/
 
 ### Response Format
 - **Brief Summary First**: Always start with a concise summary answering the core question
-- **Optional Detail Expansion**: After the summary, offer detailed explanations with: "より詳細な内容や根拠、サンプルコードなどの提示が必要であれば言ってね"
+- **Optional Detail Expansion**: After the summary, offer detailed explanations with: "より詳細な内容や根拠、サンプルコードなどの提示が必要であれば言ってください"
 - **User-Controlled Depth**: Provide detailed information only when explicitly requested
 - **Structured Information**: When details are requested, provide comprehensive explanations with examples and code samples
 

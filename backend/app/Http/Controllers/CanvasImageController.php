@@ -35,36 +35,37 @@ class CanvasImageController extends Controller
 
         $canvas = $user->canvases()->findOrFail($canvasId);
 
-        $imageUrl = $request->validated()['add_picture_url'];
+        $validated = $request->validated();
+        $imageUrl = $validated['add_picture_url'];
 
-        // Create a stream context with timeout
-        $context = stream_context_create([
-            'http' => [
-                'timeout' => 10,
-            ],
-        ]);
-
-        // Get image size from URL
+        // Get image size from URL or use provided dimensions
         try {
-            $imageSize = @getimagesize($imageUrl, $imageInfo);
+            // If width and height are provided, use them (for localhost images)
+            if (isset($validated['width']) && isset($validated['height'])) {
+                $width = $validated['width'];
+                $height = $validated['height'];
+            } else {
+                // Try to get image size from URL
+                $imageSize = @getimagesize($imageUrl);
 
-            if ($imageSize === false) {
-                return response()->json([
-                    'message' => 'Failed to fetch image from URL',
-                    'errors' => ['add_picture_url' => ['Unable to retrieve image dimensions']],
-                ], 422);
+                if ($imageSize === false) {
+                    return response()->json([
+                        'message' => 'Failed to fetch image from URL',
+                        'errors' => ['add_picture_url' => ['Unable to retrieve image dimensions. Please provide width and height.']],
+                    ], 422);
+                }
+
+                [$width, $height] = $imageSize;
             }
 
-            [$width, $height] = $imageSize;
-
-            // Create image record with default values
+            // Create image record with provided or default values
             $image = $canvas->images()->create([
                 'uri' => $imageUrl,
-                'x' => 0,
-                'y' => 0,
+                'x' => $validated['x'] ?? 0,
+                'y' => $validated['y'] ?? 0,
                 'width' => $width,
                 'height' => $height,
-                'size' => 1.0,
+                'size' => $validated['size'] ?? 1.0,
                 'left' => 0,
                 'right' => 0,
                 'top' => 0,

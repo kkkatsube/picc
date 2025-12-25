@@ -1,0 +1,208 @@
+import { useState } from 'react';
+import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import type { FavoritesCarousel as FavoritesCarouselType } from '../../api';
+
+interface FavoritesCarouselProps {
+  carousel: FavoritesCarouselType;
+  onDelete: (id: number) => void;
+  onUpdate: (id: number, name: string) => void;
+  onImageDelete: (imageId: number) => void;
+  onImageAdd: (carouselId: number, imageUrl: string) => void;
+  onImageDragStart: (imageUrl: string) => void;
+  onImageReorder: (carouselId: number, imageIds: number[]) => void;
+}
+
+export function FavoritesCarousel({
+  carousel,
+  onDelete,
+  onUpdate,
+  onImageDelete,
+  onImageAdd,
+  onImageDragStart,
+  onImageReorder,
+}: FavoritesCarouselProps) {
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(carousel.name);
+  const [draggedImageId, setDraggedImageId] = useState<number | null>(null);
+  const [isDragOverCarousel, setIsDragOverCarousel] = useState(false);
+
+  const handleNameEdit = () => {
+    if (editedName.trim() && editedName !== carousel.name) {
+      onUpdate(carousel.id, editedName.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleImageDragStart = (e: React.DragEvent, imageId: number, imageUrl: string) => {
+    setDraggedImageId(imageId);
+    e.dataTransfer.effectAllowed = 'copyMove';
+    e.dataTransfer.setData('text/plain', imageUrl);
+    onImageDragStart(imageUrl);
+  };
+
+  const handleImageDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+  };
+
+  const handleImageDrop = (e: React.DragEvent, targetImageId: number) => {
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (!draggedImageId || draggedImageId === targetImageId) {
+      setDraggedImageId(null);
+      return;
+    }
+
+    const images = carousel.images || [];
+    const draggedIndex = images.findIndex((img) => img.id === draggedImageId);
+    const targetIndex = images.findIndex((img) => img.id === targetImageId);
+
+    if (draggedIndex === -1 || targetIndex === -1) {
+      setDraggedImageId(null);
+      return;
+    }
+
+    // 並び替え
+    const reordered = [...images];
+    const [removed] = reordered.splice(draggedIndex, 1);
+    reordered.splice(targetIndex, 0, removed);
+
+    onImageReorder(
+      carousel.id,
+      reordered.map((img) => img.id)
+    );
+    setDraggedImageId(null);
+  };
+
+  const handleImageDragEnd = () => {
+    setDraggedImageId(null);
+  };
+
+  // Handle drop from local image carousel
+  const handleCarouselDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'copy';
+    setIsDragOverCarousel(true);
+  };
+
+  const handleCarouselDragLeave = () => {
+    setIsDragOverCarousel(false);
+  };
+
+  const handleCarouselDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverCarousel(false);
+
+    const imageUrl = e.dataTransfer.getData('text/plain');
+    if (imageUrl && !draggedImageId) {
+      // This is from local carousel, not internal reorder
+      onImageAdd(carousel.id, imageUrl);
+    }
+  };
+
+  return (
+    <div className="bg-white rounded-lg shadow p-4">
+      {/* Header */}
+      <div className="flex items-center justify-between mb-3">
+        {isEditing ? (
+          <div className="flex items-center gap-2 flex-1">
+            <input
+              type="text"
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleNameEdit();
+                if (e.key === 'Escape') {
+                  setIsEditing(false);
+                  setEditedName(carousel.name);
+                }
+              }}
+              className="flex-1 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+            <button
+              onClick={handleNameEdit}
+              className="p-1 text-green-600 hover:text-green-700"
+              title="保存"
+            >
+              <CheckIcon className="h-4 w-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <h3 className="text-sm font-medium text-gray-900">⭐ {carousel.name}</h3>
+            <button
+              onClick={() => setIsEditing(true)}
+              className="p-1 text-gray-400 hover:text-gray-600"
+              title="名前を編集"
+            >
+              <PencilIcon className="h-3 w-3" />
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={() => onDelete(carousel.id)}
+          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+          title="カルーセルを削除"
+        >
+          <XMarkIcon className="h-4 w-4" />
+        </button>
+      </div>
+
+      {/* Images */}
+      <div
+        className="relative w-full min-h-24"
+        style={{
+          scrollbarWidth: 'thin',
+          backgroundColor: isDragOverCarousel ? '#dbeafe' : 'transparent',
+        }}
+        onDragOver={handleCarouselDragOver}
+        onDragLeave={handleCarouselDragLeave}
+        onDrop={handleCarouselDrop}
+      >
+        {carousel.images && carousel.images.length > 0 ? (
+          <div className="flex gap-2 overflow-x-auto pb-2 min-h-24">
+            {carousel.images.map((image) => (
+              <div
+                key={image.id}
+                className="relative flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move hover:ring-2 hover:ring-blue-500 transition-all"
+                draggable
+                onDragStart={(e) => handleImageDragStart(e, image.id, image.image_url)}
+                onDragOver={handleImageDragOver}
+                onDrop={(e) => handleImageDrop(e, image.id)}
+                onDragEnd={handleImageDragEnd}
+              >
+                <img
+                  src={image.image_url}
+                  alt={`Image ${image.id}`}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                />
+                {/* Delete button on hover */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onImageDelete(image.id);
+                  }}
+                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                  title="画像を削除"
+                >
+                  <XMarkIcon className="h-3 w-3" />
+                </button>
+              </div>
+            ))}
+          </div>
+        ) : (
+          <div className="flex items-center justify-center h-24">
+            <p className="text-sm text-gray-500">
+              ローカル画像をドラッグ&ドロップして追加してください
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}

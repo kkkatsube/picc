@@ -34,7 +34,17 @@ class FavoritesImageController extends Controller
     public function store(Request $request, string $carouselId): JsonResponse
     {
         $validated = $request->validate([
-            'image_url' => 'required|string|url|max:2048',
+            'image_url' => [
+                'required',
+                'string',
+                'max:2048',
+                function ($attribute, $value, $fail) {
+                    // Allow URLs with multibyte characters (Japanese, etc.)
+                    if (!filter_var($value, FILTER_VALIDATE_URL) && !preg_match('/^https?:\/\//', $value)) {
+                        $fail('The ' . $attribute . ' must be a valid URL.');
+                    }
+                },
+            ],
         ]);
 
         /** @var \App\Models\User $user */
@@ -94,6 +104,14 @@ class FavoritesImageController extends Controller
             ->firstOrFail();
 
         DB::transaction(function () use ($carousel, $validated) {
+            // First, set all images to temporary negative order values to avoid unique constraint violations
+            foreach ($validated['image_ids'] as $order => $imageId) {
+                FavoritesImage::where('carousel_id', $carousel->id)
+                    ->where('id', $imageId)
+                    ->update(['order' => -($order + 1)]);
+            }
+
+            // Then, set them to their final positive order values
             foreach ($validated['image_ids'] as $order => $imageId) {
                 FavoritesImage::where('carousel_id', $carousel->id)
                     ->where('id', $imageId)

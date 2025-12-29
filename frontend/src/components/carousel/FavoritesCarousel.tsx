@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, PencilIcon, CheckIcon, StarIcon } from '@heroicons/react/24/outline';
 import type { FavoritesCarousel as FavoritesCarouselType } from '../../api';
 
 interface FavoritesCarouselProps {
@@ -183,7 +183,10 @@ export function FavoritesCarousel({
             onDragStart={onCarouselDragStart}
             onDragEnd={onCarouselDragEnd}
           >
-            <h3 className="text-sm font-medium text-gray-900">⭐ {carousel.name}</h3>
+            <div className="flex items-center gap-1.5">
+              <StarIcon className="h-4 w-4 text-yellow-500" />
+              <h3 className="text-sm font-medium text-gray-900">{carousel.name}</h3>
+            </div>
             <button
               onClick={() => setIsEditing(true)}
               className="p-1 text-gray-400 hover:text-gray-600"

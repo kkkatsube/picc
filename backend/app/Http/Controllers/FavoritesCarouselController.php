@@ -109,14 +109,36 @@ class FavoritesCarouselController extends Controller
     public function reorder(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'carousel_ids' => 'required|array',
-            'carousel_ids.*' => 'required|integer|exists:favorites_carousels,id',
+            'carousel_ids' => 'required|array|min:1',
+            'carousel_ids.*' => 'required|integer',
         ]);
 
         /** @var \App\Models\User $user */
         $user = $request->user();
 
+        // Verify all carousel IDs belong to the user
+        $userCarouselIds = FavoritesCarousel::where('user_id', $user->id)
+            ->pluck('id')
+            ->toArray();
+
+        $invalidIds = array_diff($validated['carousel_ids'], $userCarouselIds);
+        if (!empty($invalidIds)) {
+            return response()->json([
+                'message' => 'Invalid carousel IDs provided',
+                'invalid_ids' => $invalidIds,
+            ], 422);
+        }
+
         DB::transaction(function () use ($user, $validated) {
+            // First, set all orders to temporary high values to avoid unique constraint violations
+            $tempOffset = 10000;
+            foreach ($validated['carousel_ids'] as $tempOrder => $carouselId) {
+                FavoritesCarousel::where('user_id', $user->id)
+                    ->where('id', $carouselId)
+                    ->update(['order' => $tempOffset + $tempOrder]);
+            }
+
+            // Then, set the final order values
             foreach ($validated['carousel_ids'] as $order => $carouselId) {
                 FavoritesCarousel::where('user_id', $user->id)
                     ->where('id', $carouselId)

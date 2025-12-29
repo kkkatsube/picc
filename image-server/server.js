@@ -106,8 +106,8 @@ app.get('/folders', (req, res) => {
 });
 
 /**
- * GET /random?count=N&path=xxx
- * ランダムに画像をN件取得（指定パス配下から）
+ * GET /random?count=N&path=xxx&sort=random|asc|desc&skip=N
+ * 画像をN件取得（指定パス配下から、ソート順指定可能）
  */
 app.get('/random', (req, res) => {
   if (!IMAGES_DIR) {
@@ -123,7 +123,9 @@ app.get('/random', (req, res) => {
   }
 
   const count = parseInt(req.query.count) || 10;
+  const skip = parseInt(req.query.skip) || 0;
   const currentPath = req.query.path || '';
+  const sort = req.query.sort || 'random'; // 'random' | 'asc' | 'desc'
   const fullPath = path.join(IMAGES_DIR, currentPath);
 
   // セキュリティ: パストラバーサル防止
@@ -146,11 +148,28 @@ app.get('/random', (req, res) => {
       return res.json([]);
     }
 
-    // ランダムに選択
-    const randomImages = getRandomItems(allImages, count);
+    let selectedImages;
+    if (sort === 'random') {
+      // ランダムに選択（skipは無視）
+      selectedImages = getRandomItems(allImages, count);
+    } else {
+      // ファイルの stat を取得して timestamp でソート
+      const imagesWithStats = allImages.map(filePath => ({
+        path: filePath,
+        mtime: fs.statSync(filePath).mtime.getTime()
+      }));
+
+      // ソート
+      imagesWithStats.sort((a, b) => {
+        return sort === 'asc' ? a.mtime - b.mtime : b.mtime - a.mtime;
+      });
+
+      // skip件スキップしてcount件取得
+      selectedImages = imagesWithStats.slice(skip, skip + count).map(item => item.path);
+    }
 
     // レスポンス形式に整形
-    const response = randomImages.map(filePath => {
+    const response = selectedImages.map(filePath => {
       const relativePath = path.relative(IMAGES_DIR, filePath);
       return {
         id: path.basename(filePath),
@@ -160,7 +179,7 @@ app.get('/random', (req, res) => {
 
     res.json(response);
   } catch (error) {
-    console.error('Error processing random images:', error);
+    console.error('Error processing images:', error);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

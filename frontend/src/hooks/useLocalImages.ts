@@ -13,10 +13,13 @@ export interface Folder {
 
 const LOCAL_IMAGE_SERVER_URL = 'http://localhost:4000';
 
+export type SortOrder = 'random' | 'asc' | 'desc';
+
 export function useLocalImages() {
   const [images, setImages] = useState<LocalImage[]>([]);
   const [folders, setFolders] = useState<Folder[]>([]);
   const [currentPath, setCurrentPath] = useState<string>('');
+  const [sortOrder, setSortOrder] = useState<SortOrder>('random');
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<Error | null>(null);
 
@@ -35,13 +38,15 @@ export function useLocalImages() {
     }
   }, []);
 
-  const fetchRandomImages = useCallback(async (count: number = 10, path: string = '') => {
+  const fetchRandomImages = useCallback(async (count: number = 10, path: string = '', sort: SortOrder = 'random') => {
     setIsLoading(true);
     setError(null);
+    // Clear images when changing folders
+    setImages([]);
 
     try {
       const response = await axios.get<LocalImage[]>(`${LOCAL_IMAGE_SERVER_URL}/random`, {
-        params: { count, path },
+        params: { count, path, sort },
       });
       setImages(response.data);
       setCurrentPath(path);
@@ -60,8 +65,10 @@ export function useLocalImages() {
     setError(null);
 
     try {
+      // ソート時はskipパラメータで続きから取得、ランダム時はskipなし
+      const skip = sortOrder !== 'random' ? images.length : undefined;
       const response = await axios.get<LocalImage[]>(`${LOCAL_IMAGE_SERVER_URL}/random`, {
-        params: { count, path: currentPath },
+        params: { count, path: currentPath, sort: sortOrder, skip },
       });
       setImages((prev) => [...prev, ...response.data]);
     } catch (err) {
@@ -71,20 +78,27 @@ export function useLocalImages() {
     } finally {
       setIsLoading(false);
     }
-  }, [currentPath]);
+  }, [currentPath, sortOrder, images.length]);
 
   const navigateToFolder = useCallback(async (path: string) => {
-    await fetchRandomImages(10, path);
-  }, [fetchRandomImages]);
+    await fetchRandomImages(10, path, sortOrder);
+  }, [fetchRandomImages, sortOrder]);
+
+  const changeSortOrder = useCallback(async (newSortOrder: SortOrder) => {
+    setSortOrder(newSortOrder);
+    await fetchRandomImages(10, currentPath, newSortOrder);
+  }, [fetchRandomImages, currentPath]);
 
   return {
     images,
     folders,
     currentPath,
+    sortOrder,
     isLoading,
     error,
     fetchRandomImages,
     loadMore,
     navigateToFolder,
+    changeSortOrder,
   };
 }

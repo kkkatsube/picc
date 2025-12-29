@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { FavoritesService } from '../api/services/FavoritesService';
-import type { FavoritesCarousel, FavoritesImage } from '../api';
+import type { FavoritesCarousel } from '../api';
 
 /**
  * Favorites Carousels API management hook

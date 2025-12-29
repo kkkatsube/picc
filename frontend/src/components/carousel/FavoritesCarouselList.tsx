@@ -23,7 +23,7 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
 
   const [isCreating, setIsCreating] = useState(false);
   const [newCarouselName, setNewCarouselName] = useState('');
-  const [draggingCarouselId, setDraggingCarouselId] = useState<number | null>(null);
+  const [_draggingCarouselId, setDraggingCarouselId] = useState<number | null>(null);
 
   const handleCreateCarousel = () => {
     if (newCarouselName.trim()) {

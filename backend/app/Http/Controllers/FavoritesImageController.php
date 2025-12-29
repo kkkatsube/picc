@@ -40,8 +40,8 @@ class FavoritesImageController extends Controller
                 'max:2048',
                 function ($attribute, $value, $fail) {
                     // Allow URLs with multibyte characters (Japanese, etc.)
-                    if (!filter_var($value, FILTER_VALIDATE_URL) && !preg_match('/^https?:\/\//', $value)) {
-                        $fail('The ' . $attribute . ' must be a valid URL.');
+                    if (! filter_var($value, FILTER_VALIDATE_URL) && ! preg_match('/^https?:\/\//', $value)) {
+                        $fail('The '.$attribute.' must be a valid URL.');
                     }
                 },
             ],

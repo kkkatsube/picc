@@ -1,4 +1,3 @@
-import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useCanvasEditor } from '../hooks/useCanvasEditor';
@@ -12,8 +11,6 @@ export default function CanvasEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canvasId = parseInt(id || '0', 10);
-
-  const [draggingImageUrl, setDraggingImageUrl] = useState<string | null>(null);
 
   const {
     canvas,
@@ -85,8 +82,8 @@ export default function CanvasEditorPage() {
     img.src = imageUrl;
   };
 
-  const handleImageDragStart = (imageUrl: string) => {
-    setDraggingImageUrl(imageUrl);
+  const handleImageDragStart = (_imageUrl: string) => {
+    // Image drag start handled by individual carousel components
   };
 
   const handleDeleteCanvas = () => {

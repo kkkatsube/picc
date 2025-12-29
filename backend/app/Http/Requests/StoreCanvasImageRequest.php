@@ -24,8 +24,8 @@ class StoreCanvasImageRequest extends FormRequest
                 'required',
                 'url',
                 function ($attribute, $value, $fail) {
-                    if (!preg_match('/^https:\/\//', $value) && !preg_match('/^http:\/\/localhost/', $value)) {
-                        $fail('The ' . $attribute . ' must be a secure HTTPS URL or localhost HTTP URL.');
+                    if (! preg_match('/^https:\/\//', $value) && ! preg_match('/^http:\/\/localhost/', $value)) {
+                        $fail('The '.$attribute.' must be a secure HTTPS URL or localhost HTTP URL.');
                     }
                 },
             ],

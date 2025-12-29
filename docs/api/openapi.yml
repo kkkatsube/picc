@@ -1346,6 +1346,36 @@ components:
           pattern: '^https://'
           example: "https://example.com/image.jpg"
           description: HTTPS URL of the image to add (server will fetch dimensions automatically)
+        x:
+          type: integer
+          nullable: true
+          example: 100
+          description: X position on canvas (optional)
+        y:
+          type: integer
+          nullable: true
+          example: 200
+          description: Y position on canvas (optional)
+        size:
+          type: number
+          format: float
+          nullable: true
+          minimum: 0.1
+          maximum: 5.0
+          example: 1.0
+          description: Size multiplier (optional, 0.1-5.0)
+        width:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 800
+          description: Original image width in pixels (optional, to skip getimagesize())
+        height:
+          type: integer
+          nullable: true
+          minimum: 1
+          example: 600
+          description: Original image height in pixels (optional, to skip getimagesize())
 
     UpdateCanvasImageRequest:
       type: object

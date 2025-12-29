@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { PlusIcon } from '@heroicons/react/24/outline';
 import { FavoritesCarousel } from './FavoritesCarousel';
 import { LocalImageCarousel } from './LocalImageCarousel';
@@ -23,7 +23,6 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
 
   const [isCreating, setIsCreating] = useState(false);
   const [newCarouselName, setNewCarouselName] = useState('');
-  const [_draggingCarouselId, setDraggingCarouselId] = useState<number | null>(null);
 
   const handleCreateCarousel = () => {
     if (newCarouselName.trim()) {
@@ -50,7 +49,6 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     // (not from images inside)
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('carousel-id', String(carouselId));
-    setDraggingCarouselId(carouselId);
   };
 
   const handleCarouselDragOver = (e: React.DragEvent) => {
@@ -78,7 +76,6 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     const draggedCarouselId = parseInt(carouselId, 10);
 
     if (!draggedCarouselId || draggedCarouselId === targetCarouselId) {
-      setDraggingCarouselId(null);
       return;
     }
 
@@ -86,7 +83,6 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     const targetIndex = carousels.findIndex((c) => c.id === targetCarouselId);
 
     if (draggedIndex === -1 || targetIndex === -1) {
-      setDraggingCarouselId(null);
       return;
     }
 
@@ -96,11 +92,10 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     reordered.splice(targetIndex, 0, removed);
 
     reorderCarousels(reordered.map((c) => c.id));
-    setDraggingCarouselId(null);
   };
 
   const handleCarouselDragEnd = () => {
-    setDraggingCarouselId(null);
+    // Carousel drag ended
   };
 
   if (isLoading) {

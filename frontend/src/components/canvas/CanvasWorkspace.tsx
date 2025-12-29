@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
+import React, { useState, useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
 import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {

@@ -1,4 +1,5 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { useLocalImages } from '../../hooks/useLocalImages';
 
 interface LocalImageCarouselProps {
@@ -8,11 +9,26 @@ interface LocalImageCarouselProps {
 export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps) {
   const { images, isLoading, error, fetchRandomImages, loadMore } = useLocalImages();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
 
   // 初回ロード
   useEffect(() => {
     fetchRandomImages(10);
   }, [fetchRandomImages]);
+
+  // ESCキーでプレビューを閉じる
+  useEffect(() => {
+    if (!previewImage) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPreviewImage(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [previewImage]);
 
   // 横スクロール時の追加読み込み
   const handleScroll = () => {
@@ -65,8 +81,12 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
               alt={image.id}
               draggable
               onDragStart={(e) => handleDragStart(e, image.url)}
-              className="w-full h-full object-cover"
+              className="w-full h-full object-cover cursor-pointer"
               loading="lazy"
+              onClick={(e) => {
+                e.stopPropagation();
+                setPreviewImage(image.url);
+              }}
             />
           </div>
         ))}
@@ -102,6 +122,65 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
           </p>
         )}
       </div>
+
+      {/* 画像プレビューモーダル */}
+      {previewImage && createPortal(
+        <div
+          onClick={() => setPreviewImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            margin: 0,
+            padding: 0,
+          }}
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            aria-label="閉じる"
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '16px',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              border: 'none',
+              fontSize: '36px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              zIndex: 10000,
+              color: '#1f2937',
+            }}
+          >
+            ×
+          </button>
+          <img
+            src={previewImage}
+            alt="プレビュー"
+            onClick={() => setPreviewImage(null)}
+            style={{
+              maxHeight: '95vh',
+              maxWidth: '95vw',
+              objectFit: 'contain',
+              display: 'block',
+              cursor: 'pointer',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

@@ -1,4 +1,5 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { XMarkIcon, PencilIcon, CheckIcon } from '@heroicons/react/24/outline';
 import type { FavoritesCarousel as FavoritesCarouselType } from '../../api';
 
@@ -29,6 +30,21 @@ export function FavoritesCarousel({
   const [editedName, setEditedName] = useState(carousel.name);
   const [draggedImageId, setDraggedImageId] = useState<number | null>(null);
   const [isDragOverCarousel, setIsDragOverCarousel] = useState(false);
+  const [previewImage, setPreviewImage] = useState<string | null>(null);
+
+  // ESCキーでプレビューを閉じる
+  useEffect(() => {
+    if (!previewImage) return;
+
+    const handleEsc = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setPreviewImage(null);
+      }
+    };
+
+    window.addEventListener('keydown', handleEsc);
+    return () => window.removeEventListener('keydown', handleEsc);
+  }, [previewImage]);
 
   const handleNameEdit = () => {
     if (editedName.trim() && editedName !== carousel.name) {
@@ -213,8 +229,12 @@ export function FavoritesCarousel({
                 <img
                   src={image.image_url}
                   alt={`Image ${image.id}`}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-cover cursor-pointer"
                   loading="lazy"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(image.image_url);
+                  }}
                 />
                 {/* Delete button on hover */}
                 <button
@@ -238,6 +258,65 @@ export function FavoritesCarousel({
           </div>
         )}
       </div>
+
+      {/* 画像プレビューモーダル */}
+      {previewImage && createPortal(
+        <div
+          onClick={() => setPreviewImage(null)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            zIndex: 9999,
+            margin: 0,
+            padding: 0,
+          }}
+        >
+          <button
+            onClick={() => setPreviewImage(null)}
+            aria-label="閉じる"
+            style={{
+              position: 'fixed',
+              top: '16px',
+              right: '16px',
+              width: '48px',
+              height: '48px',
+              borderRadius: '50%',
+              backgroundColor: 'white',
+              border: 'none',
+              fontSize: '36px',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+              zIndex: 10000,
+              color: '#1f2937',
+            }}
+          >
+            ×
+          </button>
+          <img
+            src={previewImage}
+            alt="プレビュー"
+            onClick={() => setPreviewImage(null)}
+            style={{
+              maxHeight: '95vh',
+              maxWidth: '95vw',
+              objectFit: 'contain',
+              display: 'block',
+              cursor: 'pointer',
+              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+            }}
+          />
+        </div>,
+        document.body
+      )}
     </div>
   );
 }

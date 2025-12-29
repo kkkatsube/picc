@@ -5,6 +5,7 @@ import { CanvasSettings } from '../components/canvas/CanvasSettings';
 import { CanvasWorkspace } from '../components/canvas/CanvasWorkspace';
 import { AddImageForm } from '../components/canvas/AddImageForm';
 import { ImagesList } from '../components/canvas/ImagesList';
+import { FavoritesCarouselList } from '../components/carousel/FavoritesCarouselList';
 
 export default function CanvasEditorPage() {
   const { id } = useParams<{ id: string }>();
@@ -31,6 +32,58 @@ export default function CanvasEditorPage() {
 
   const handleAddImage = (url: string) => {
     addImage({ add_picture_url: url });
+  };
+
+  const handleAddImageFromCarousel = (imageUrl: string, x: number, y: number) => {
+    console.log('handleAddImageFromCarousel called:', { imageUrl, x, y });
+
+    // Calculate size: 30% of canvas width
+    const canvasWidth = canvas?.width || 1920;
+    const targetWidth = canvasWidth * 0.3;
+
+    // Create a temporary image to get dimensions
+    const img = new Image();
+    img.crossOrigin = 'anonymous'; // Enable CORS
+
+    img.onload = () => {
+      console.log('Image loaded:', { width: img.width, height: img.height });
+      const size = targetWidth / img.width;
+
+      // Add image with calculated size, drop position, and dimensions
+      console.log('Adding image to canvas:', { imageUrl, x, y, size, width: img.width, height: img.height });
+      addImage({
+        add_picture_url: imageUrl,
+        x,
+        y,
+        size: Math.round(size * 100) / 100, // Round to 2 decimal places
+        width: img.width,
+        height: img.height,
+      });
+    };
+
+    img.onerror = (error) => {
+      console.error('Failed to load image:', error);
+      // Fallback: add image with default size if loading fails
+      // Use estimated dimensions for common image sizes
+      const estimatedWidth = 800;
+      const estimatedHeight = 600;
+      const size = targetWidth / estimatedWidth;
+
+      addImage({
+        add_picture_url: imageUrl,
+        x,
+        y,
+        size: Math.round(size * 100) / 100,
+        width: estimatedWidth,
+        height: estimatedHeight,
+      });
+    };
+
+    img.src = imageUrl;
+  };
+
+  const handleImageDragStart = (_imageUrl: string) => {
+    // Image drag start handled by individual carousel components
   };
 
   const handleDeleteCanvas = () => {
@@ -117,14 +170,21 @@ export default function CanvasEditorPage() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Canvas Workspace (2/3 width on desktop) */}
-          <div className="lg:col-span-2">
+          {/* Left Column: Canvas Workspace & Carousels (2/3 width on desktop) */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Canvas Workspace */}
             <CanvasWorkspace
               canvas={canvas}
               images={images}
               onUpdateImage={(imageId, data) => updateImage({ imageId, data })}
+              onAddImage={handleAddImageFromCarousel}
               isUpdatingImage={isUpdatingImage}
             />
+
+            {/* Image Carousels - PC only (hidden on mobile) */}
+            <div className="hidden lg:block">
+              <FavoritesCarouselList onImageDragStart={handleImageDragStart} />
+            </div>
           </div>
 
           {/* Right Column: Settings & Controls (1/3 width on desktop) */}

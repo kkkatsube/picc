@@ -7,7 +7,7 @@ interface LocalImageCarouselProps {
 }
 
 export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps) {
-  const { images, isLoading, error, fetchRandomImages, loadMore } = useLocalImages();
+  const { images, folders, currentPath, isLoading, error, fetchRandomImages, loadMore, navigateToFolder } = useLocalImages();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
 
@@ -15,6 +15,15 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
   useEffect(() => {
     fetchRandomImages(10);
   }, [fetchRandomImages]);
+
+  // パンくずリストの生成
+  const breadcrumbs = currentPath
+    ? currentPath.split('/').reduce<{ name: string; path: string }[]>((acc, part, index, arr) => {
+        const path = arr.slice(0, index + 1).join('/');
+        acc.push({ name: part, path });
+        return acc;
+      }, [])
+    : [];
 
   // ESCキーでプレビューを閉じる
   useEffect(() => {
@@ -64,6 +73,48 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
   return (
     <div className="bg-white rounded-lg shadow p-4">
       <h3 className="text-sm font-medium text-gray-900 mb-3">📦 ローカル画像</h3>
+
+      {/* パンくずリスト */}
+      {currentPath && (
+        <div className="bg-gray-50 rounded px-3 py-2 mb-3">
+          <div className="flex items-center gap-1 text-xs text-gray-600 flex-wrap">
+            <button
+              onClick={() => navigateToFolder('')}
+              className="hover:text-blue-600 hover:underline transition-colors"
+            >
+              🏠 ルート
+            </button>
+            {breadcrumbs.map((crumb, index) => (
+              <React.Fragment key={crumb.path}>
+                <span className="text-gray-400">/</span>
+                <button
+                  onClick={() => navigateToFolder(crumb.path)}
+                  className={`hover:text-blue-600 hover:underline transition-colors ${
+                    index === breadcrumbs.length - 1 ? 'font-medium text-gray-900' : ''
+                  }`}
+                >
+                  {crumb.name}
+                </button>
+              </React.Fragment>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* サブフォルダタグ */}
+      {folders.length > 0 && (
+        <div className="flex gap-2 flex-wrap mb-3">
+          {folders.map((folder) => (
+            <button
+              key={folder.path}
+              onClick={() => navigateToFolder(folder.path)}
+              className="px-3 py-1.5 bg-blue-50 text-blue-700 text-xs rounded-full hover:bg-blue-100 transition-colors flex items-center gap-1.5"
+            >
+              📁 {folder.name}
+            </button>
+          ))}
+        </div>
+      )}
 
       <div
         ref={scrollContainerRef}

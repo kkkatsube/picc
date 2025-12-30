@@ -122,7 +122,7 @@ class FavoritesCarouselController extends Controller
             ->toArray();
 
         $invalidIds = array_diff($validated['carousel_ids'], $userCarouselIds);
-        if (!empty($invalidIds)) {
+        if (! empty($invalidIds)) {
             return response()->json([
                 'message' => 'Invalid carousel IDs provided',
                 'invalid_ids' => $invalidIds,

@@ -47,8 +47,8 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isU
   // Selected state (for touch devices - persists after tap)
   const [selectedImageId, setSelectedImageId] = useState<number | null>(null);
 
-  const canvasWidth = canvas?.width || 1920;
-  const canvasHeight = canvas?.height || 1080;
+  const canvasWidth = canvas?.width || 3840;
+  const canvasHeight = canvas?.height || 2160;
 
   // コンテナの横幅いっぱいに Canvas を表示するスケールを計算（縦幅は800pxまで）
   useEffect(() => {

@@ -168,10 +168,18 @@ export default function CanvasEditorPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Canvas Workspace & Carousels (2/3 width on desktop) */}
-          <div className="lg:col-span-2 space-y-6">
+      <main className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-6 justify-center">
+          {/* Left Panel: Overflow Carousels (XL+ only) - 450px width */}
+          <aside className="hidden xl:flex flex-col flex-shrink-0 overflow-y-auto" style={{ width: '450px', maxHeight: 'calc(100vh - 200px)' }}>
+            {/* This will be populated by FavoritesCarouselList with overflow logic */}
+            <div id="left-panel-carousels" className="space-y-3">
+              {/* Overflow carousels will be rendered here */}
+            </div>
+          </aside>
+
+          {/* Center Column: Canvas Workspace & Bottom Carousels - 900px width */}
+          <div className="flex-shrink-0 space-y-6" style={{ width: '900px' }}>
             {/* Canvas Workspace */}
             <CanvasWorkspace
               canvas={canvas}
@@ -181,14 +189,14 @@ export default function CanvasEditorPage() {
               isUpdatingImage={isUpdatingImage}
             />
 
-            {/* Image Carousels - PC only (hidden on mobile) */}
+            {/* Bottom Carousels - Hidden on mobile */}
             <div className="hidden lg:block">
               <FavoritesCarouselList onImageDragStart={handleImageDragStart} />
             </div>
           </div>
 
-          {/* Right Column: Settings & Controls (1/3 width on desktop) */}
-          <div className="space-y-6">
+          {/* Right Column: Settings & Controls - 450px width */}
+          <aside className="flex-shrink-0 space-y-6 hidden lg:block" style={{ width: '450px' }}>
             {/* Canvas Settings */}
             <CanvasSettings
               canvas={canvas}
@@ -210,7 +218,7 @@ export default function CanvasEditorPage() {
               isDeletingImage={isDeletingImage}
               onDeleteImage={deleteImage}
             />
-          </div>
+          </aside>
         </div>
       </main>
     </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, type PointerEvent, type MouseEvent } from 'react';
+import { PencilIcon } from '@heroicons/react/24/outline';
 import type { Canvas, CanvasImage, UpdateCanvasImageRequest } from '../../api';
 
 interface CanvasWorkspaceProps {
@@ -7,9 +8,10 @@ interface CanvasWorkspaceProps {
   onUpdateImage?: (imageId: number, data: UpdateCanvasImageRequest) => void;
   onAddImage?: (imageUrl: string, x: number, y: number) => void;
   isUpdatingImage?: boolean;
+  onEditClick?: () => void;
 }
 
-export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isUpdatingImage }: CanvasWorkspaceProps) {
+export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isUpdatingImage, onEditClick }: CanvasWorkspaceProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1.0);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -638,7 +640,18 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isU
       {/* Header - hide in pseudo-fullscreen */}
       {!(isFullscreen && !document.fullscreenElement) && (
         <div className="bg-gray-50 px-4 py-3 border-b border-gray-200 flex justify-between items-center">
-          <h3 className="text-lg font-semibold">Canvas Workspace</h3>
+          <div className="flex items-center gap-3">
+            <h3 className="text-lg font-semibold">{canvas?.name || 'Untitled Canvas'}</h3>
+            {onEditClick && (
+              <button
+                onClick={onEditClick}
+                className="p-1.5 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+                title="編集"
+              >
+                <PencilIcon className="h-4 w-4" />
+              </button>
+            )}
+          </div>
           {/* Fullscreen/Exit button */}
           <button
             onClick={isFullscreen ? exitFullscreen : enterFullscreen}

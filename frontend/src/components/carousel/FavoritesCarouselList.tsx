@@ -26,6 +26,10 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
   const [newCarouselName, setNewCarouselName] = useState('');
   const [draggedCarouselId, setDraggedCarouselId] = useState<number | null>(null);
   const [bottomCarouselLimit, setBottomCarouselLimit] = useState(3);
+  const [portalTargets, setPortalTargets] = useState<{
+    left: HTMLElement | null;
+    right: HTMLElement | null;
+  }>({ left: null, right: null });
   const containerRef = useRef<HTMLDivElement>(null);
 
   // Calculate how many carousels fit in bottom area
@@ -72,7 +76,14 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     calculateVisibleCarousels();
     window.addEventListener('resize', calculateVisibleCarousels);
     return () => window.removeEventListener('resize', calculateVisibleCarousels);
-  }, []);
+  }, [carousels.length]); // Re-calculate when number of carousels changes
+
+  // Check for portal target elements
+  useEffect(() => {
+    const leftElement = document.getElementById('left-panel-carousels');
+    const rightElement = document.getElementById('right-panel-carousels');
+    setPortalTargets({ left: leftElement, right: rightElement });
+  }, [carousels.length]); // Re-check when carousels change or on mount
 
   const handleCreateCarousel = () => {
     if (newCarouselName.trim()) {
@@ -160,10 +171,18 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     );
   }
 
-  // Split carousels: LocalImageCarousel + favorites
-  // bottomCarouselLimit includes LocalImageCarousel, so favorites limit is (limit - 1)
+  // Split carousels into 3 tiers: Center → Left → Right
+  // Center (bottom): LocalImageCarousel + first N favorites
+  // Left panel: Next M favorites
+  // Right panel: All remaining favorites (with scroll)
+
+  // For now, use same calculation for left panel limit
+  // In the future, can make this more dynamic
+  const leftPanelLimit = bottomCarouselLimit; // Same number as bottom
+
   const favoritesForBottom = carousels.slice(0, bottomCarouselLimit - 1);
-  const favoritesForLeftPanel = carousels.slice(bottomCarouselLimit - 1);
+  const favoritesForLeftPanel = carousels.slice(bottomCarouselLimit - 1, bottomCarouselLimit - 1 + leftPanelLimit);
+  const favoritesForRightPanel = carousels.slice(bottomCarouselLimit - 1 + leftPanelLimit);
 
   return (
     <>
@@ -242,35 +261,56 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
       </div>
 
       {/* Left Panel Overflow Carousels - Rendered via Portal */}
-      {favoritesForLeftPanel.length > 0 && typeof document !== 'undefined' && (() => {
-        const leftPanelElement = document.getElementById('left-panel-carousels');
-        if (!leftPanelElement) return null;
+      {favoritesForLeftPanel.length > 0 && portalTargets.left && createPortal(
+        favoritesForLeftPanel.map((carousel) => (
+          <div
+            key={`left-${carousel.id}`}
+            onDragOver={handleCarouselDragOver}
+            onDrop={(e) => handleCarouselDrop(e, carousel.id)}
+            className="mb-3"
+          >
+            <FavoritesCarousel
+              carousel={carousel}
+              onDelete={deleteCarousel}
+              onUpdate={handleUpdateCarousel}
+              onImageDelete={deleteImage}
+              onImageAdd={handleAddImage}
+              onImageDragStart={onImageDragStart}
+              onImageReorder={handleReorderImages}
+              onCarouselDragStart={(e) => handleCarouselDragStart(e, carousel.id)}
+              onCarouselDragEnd={handleCarouselDragEnd}
+              layout="grid"
+            />
+          </div>
+        )),
+        portalTargets.left
+      )}
 
-        return createPortal(
-          favoritesForLeftPanel.map((carousel) => (
-            <div
-              key={`left-${carousel.id}`}
-              onDragOver={handleCarouselDragOver}
-              onDrop={(e) => handleCarouselDrop(e, carousel.id)}
-              className="mb-3"
-            >
-              <FavoritesCarousel
-                carousel={carousel}
-                onDelete={deleteCarousel}
-                onUpdate={handleUpdateCarousel}
-                onImageDelete={deleteImage}
-                onImageAdd={handleAddImage}
-                onImageDragStart={onImageDragStart}
-                onImageReorder={handleReorderImages}
-                onCarouselDragStart={(e) => handleCarouselDragStart(e, carousel.id)}
-                onCarouselDragEnd={handleCarouselDragEnd}
-                layout="grid"
-              />
-            </div>
-          )),
-          leftPanelElement
-        );
-      })()}
+      {/* Right Panel Overflow Carousels - Rendered via Portal */}
+      {favoritesForRightPanel.length > 0 && portalTargets.right && createPortal(
+        favoritesForRightPanel.map((carousel) => (
+          <div
+            key={`right-${carousel.id}`}
+            onDragOver={handleCarouselDragOver}
+            onDrop={(e) => handleCarouselDrop(e, carousel.id)}
+            className="mb-3"
+          >
+            <FavoritesCarousel
+              carousel={carousel}
+              onDelete={deleteCarousel}
+              onUpdate={handleUpdateCarousel}
+              onImageDelete={deleteImage}
+              onImageAdd={handleAddImage}
+              onImageDragStart={onImageDragStart}
+              onImageReorder={handleReorderImages}
+              onCarouselDragStart={(e) => handleCarouselDragStart(e, carousel.id)}
+              onCarouselDragEnd={handleCarouselDragEnd}
+              layout="grid"
+            />
+          </div>
+        )),
+        portalTargets.right
+      )}
     </>
   );
 }

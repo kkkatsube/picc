@@ -18,8 +18,8 @@ export default function DashboardPage() {
   const handleCreateCanvas = () => {
     createCanvas({
       name: 'New Canvas',
-      width: 1920,
-      height: 1080,
+      width: 3840,
+      height: 2160,
     });
   };
 

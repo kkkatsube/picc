@@ -13,6 +13,7 @@ interface FavoritesCarouselProps {
   onImageReorder: (carouselId: number, imageIds: number[]) => void;
   onCarouselDragStart?: (e: React.DragEvent) => void;
   onCarouselDragEnd?: () => void;
+  layout?: 'horizontal' | 'grid' | 'grid-large'; // Layout mode: horizontal scroll, 4-column grid, or 9-column grid
 }
 
 export function FavoritesCarousel({
@@ -25,6 +26,7 @@ export function FavoritesCarousel({
   onImageReorder,
   onCarouselDragStart,
   onCarouselDragEnd,
+  layout = 'horizontal', // Default to horizontal
 }: FavoritesCarouselProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState(carousel.name);
@@ -218,11 +220,15 @@ export function FavoritesCarousel({
         onDrop={handleCarouselDrop}
       >
         {carousel.images && carousel.images.length > 0 ? (
-          <div className="flex gap-2 overflow-x-auto pb-2 min-h-24">
+          <div className={layout === 'grid'
+            ? "grid grid-cols-4 gap-2 pb-2"
+            : layout === 'grid-large'
+            ? "grid grid-cols-8 gap-2 pb-2"
+            : "flex gap-2 overflow-x-auto pb-2 min-h-24"}>
             {carousel.images.map((image) => (
               <div
                 key={image.id}
-                className="relative flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move hover:ring-2 hover:ring-blue-500 transition-all"
+                className="relative w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move hover:ring-2 hover:ring-blue-500 transition-all flex-shrink-0"
                 draggable
                 onDragStart={(e) => handleImageDragStart(e, image.id, image.image_url)}
                 onDragOver={handleImageDragOver}

@@ -1,16 +1,18 @@
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeftIcon } from '@heroicons/react/24/outline';
 import { useCanvasEditor } from '../hooks/useCanvasEditor';
-import { CanvasSettings } from '../components/canvas/CanvasSettings';
 import { CanvasWorkspace } from '../components/canvas/CanvasWorkspace';
-import { AddImageForm } from '../components/canvas/AddImageForm';
-import { ImagesList } from '../components/canvas/ImagesList';
+import { CanvasEditModal } from '../components/canvas/CanvasEditModal';
+import { ImagesCarousel } from '../components/canvas/ImagesCarousel';
 import { FavoritesCarouselList } from '../components/carousel/FavoritesCarouselList';
 
 export default function CanvasEditorPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const canvasId = parseInt(id || '0', 10);
+
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const {
     canvas,
@@ -168,10 +170,15 @@ export default function CanvasEditorPage() {
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Column: Canvas Workspace & Carousels (2/3 width on desktop) */}
-          <div className="lg:col-span-2 space-y-6">
+      <main className="mx-auto py-6 px-4 sm:px-6 lg:px-8">
+        <div className="flex gap-6 justify-center">
+          {/* Left Panel: Overflow Carousels (XL+ only) - 450px width */}
+          <aside id="left-panel-carousels" className="hidden xl:block flex-shrink-0 overflow-y-auto space-y-3" style={{ width: '450px', maxHeight: 'calc(100vh - 200px)' }}>
+            {/* This will be populated by FavoritesCarouselList with overflow logic */}
+          </aside>
+
+          {/* Center Column: Canvas Workspace & Bottom Controls - 900px width */}
+          <div className="flex-shrink-0 space-y-3" style={{ width: '900px' }}>
             {/* Canvas Workspace */}
             <CanvasWorkspace
               canvas={canvas}
@@ -179,38 +186,39 @@ export default function CanvasEditorPage() {
               onUpdateImage={(imageId, data) => updateImage({ imageId, data })}
               onAddImage={handleAddImageFromCarousel}
               isUpdatingImage={isUpdatingImage}
+              onEditClick={() => setShowEditModal(true)}
             />
 
-            {/* Image Carousels - PC only (hidden on mobile) */}
+            {/* Images Carousel */}
+            <ImagesCarousel
+              images={images}
+              isDeletingImage={isDeletingImage}
+              onDeleteImage={deleteImage}
+            />
+
+            {/* Bottom Carousels - Hidden on mobile */}
             <div className="hidden lg:block">
               <FavoritesCarouselList onImageDragStart={handleImageDragStart} />
             </div>
           </div>
 
-          {/* Right Column: Settings & Controls (1/3 width on desktop) */}
-          <div className="space-y-6">
-            {/* Canvas Settings */}
-            <CanvasSettings
-              canvas={canvas}
-              isUpdating={isUpdating}
-              onSave={updateCanvas}
-              onDelete={handleDeleteCanvas}
-              isDeletingCanvas={isDeletingCanvas}
-            />
+          {/* Canvas Edit Modal */}
+          <CanvasEditModal
+            canvas={canvas}
+            isOpen={showEditModal}
+            onClose={() => setShowEditModal(false)}
+            isUpdating={isUpdating}
+            onSave={updateCanvas}
+            onDelete={handleDeleteCanvas}
+            isDeletingCanvas={isDeletingCanvas}
+            isAddingImage={isAddingImage}
+            onAddImage={handleAddImage}
+          />
 
-            {/* Add Image Form */}
-            <AddImageForm
-              isAddingImage={isAddingImage}
-              onAddImage={handleAddImage}
-            />
-
-            {/* Images List */}
-            <ImagesList
-              images={images}
-              isDeletingImage={isDeletingImage}
-              onDeleteImage={deleteImage}
-            />
-          </div>
+          {/* Right Panel: Overflow Carousels (XL+ only) - 450px width */}
+          <aside id="right-panel-carousels" className="hidden xl:block flex-shrink-0 overflow-y-auto space-y-3" style={{ width: '450px', maxHeight: 'calc(100vh - 200px)' }}>
+            {/* This will be populated by FavoritesCarouselList with overflow logic */}
+          </aside>
         </div>
       </main>
     </div>

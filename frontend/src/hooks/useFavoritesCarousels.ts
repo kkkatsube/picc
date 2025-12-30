@@ -64,8 +64,14 @@ export function useFavoritesCarousels() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['favorites', 'carousels'] });
     },
-    onError: (error) => {
+    onError: (error: any) => {
       console.error('Failed to reorder carousels:', error);
+      console.error('Error details:', {
+        message: error.message,
+        body: error.body,
+        status: error.status,
+        statusText: error.statusText,
+      });
     },
   });
 

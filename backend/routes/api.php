@@ -56,10 +56,10 @@ Route::middleware('auth:sanctum')->prefix('favorites')->group(function () {
     // Carousel management
     Route::get('/carousels', [FavoritesCarouselController::class, 'index']);
     Route::post('/carousels', [FavoritesCarouselController::class, 'store']);
+    Route::put('/carousels/reorder', [FavoritesCarouselController::class, 'reorder']); // Must be before {id} routes
     Route::get('/carousels/{id}', [FavoritesCarouselController::class, 'show']);
     Route::put('/carousels/{id}', [FavoritesCarouselController::class, 'update']);
     Route::delete('/carousels/{id}', [FavoritesCarouselController::class, 'destroy']);
-    Route::put('/carousels/reorder', [FavoritesCarouselController::class, 'reorder']);
 
     // Image management
     Route::get('/carousels/{carouselId}/images', [FavoritesImageController::class, 'index']);

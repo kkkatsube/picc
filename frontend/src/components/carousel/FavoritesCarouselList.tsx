@@ -23,6 +23,7 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
 
   const [isCreating, setIsCreating] = useState(false);
   const [newCarouselName, setNewCarouselName] = useState('');
+  const [draggedCarouselId, setDraggedCarouselId] = useState<number | null>(null);
 
   const handleCreateCarousel = () => {
     if (newCarouselName.trim()) {
@@ -45,17 +46,15 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
   };
 
   const handleCarouselDragStart = (e: React.DragEvent, carouselId: number) => {
-    // Only set dragging state if we're dragging from the carousel header area
-    // (not from images inside)
+    console.log('Carousel drag start:', carouselId);
+    setDraggedCarouselId(carouselId);
     e.dataTransfer.effectAllowed = 'move';
     e.dataTransfer.setData('carousel-id', String(carouselId));
   };
 
   const handleCarouselDragOver = (e: React.DragEvent) => {
-    // Check if this is a carousel drag (not an image drag)
-    const hasCarouselData = e.dataTransfer.types.includes('carousel-id');
-
-    if (hasCarouselData) {
+    // Check if we're dragging a carousel
+    if (draggedCarouselId !== null) {
       e.preventDefault();
       e.dataTransfer.dropEffect = 'move';
     }
@@ -63,9 +62,7 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
 
   const handleCarouselDrop = (e: React.DragEvent, targetCarouselId: number) => {
     // Check if this is a carousel drag
-    const carouselId = e.dataTransfer.getData('carousel-id');
-
-    if (!carouselId) {
+    if (draggedCarouselId === null) {
       // This is not a carousel drag, let child components handle it
       return;
     }
@@ -73,9 +70,10 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     e.preventDefault();
     e.stopPropagation();
 
-    const draggedCarouselId = parseInt(carouselId, 10);
+    console.log('Carousel drop:', { draggedCarouselId, targetCarouselId });
 
-    if (!draggedCarouselId || draggedCarouselId === targetCarouselId) {
+    if (draggedCarouselId === targetCarouselId) {
+      setDraggedCarouselId(null);
       return;
     }
 
@@ -83,6 +81,8 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     const targetIndex = carousels.findIndex((c) => c.id === targetCarouselId);
 
     if (draggedIndex === -1 || targetIndex === -1) {
+      console.error('Invalid carousel indices:', { draggedIndex, targetIndex });
+      setDraggedCarouselId(null);
       return;
     }
 
@@ -91,11 +91,14 @@ export function FavoritesCarouselList({ onImageDragStart }: FavoritesCarouselLis
     const [removed] = reordered.splice(draggedIndex, 1);
     reordered.splice(targetIndex, 0, removed);
 
+    console.log('Reordering carousels:', reordered.map((c) => c.id));
     reorderCarousels(reordered.map((c) => c.id));
+    setDraggedCarouselId(null);
   };
 
   const handleCarouselDragEnd = () => {
-    // Carousel drag ended
+    console.log('Carousel drag end');
+    setDraggedCarouselId(null);
   };
 
   if (isLoading) {

@@ -11,6 +11,8 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
   const { images, folders, currentPath, sortOrder, isLoading, error, fetchRandomImages, loadMore, navigateToFolder, changeSortOrder } = useLocalImages();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [hoveredImageId, setHoveredImageId] = useState<string | null>(null); // Hover state tracking
+  const [isDragging, setIsDragging] = useState(false); // Track if currently dragging
 
   // 初回ロード
   useEffect(() => {
@@ -55,9 +57,16 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
   };
 
   const handleDragStart = (e: React.DragEvent<HTMLImageElement>, imageUrl: string) => {
+    setIsDragging(true); // Set dragging state
+    setHoveredImageId(null); // Clear hover state when drag starts
     e.dataTransfer.effectAllowed = 'copy';
     e.dataTransfer.setData('text/plain', imageUrl);
     onImageDragStart(imageUrl);
+  };
+
+  const handleDragEnd = () => {
+    setIsDragging(false); // Clear dragging state
+    setHoveredImageId(null); // Clear hover state on drag end
   };
 
   if (error) {
@@ -172,13 +181,23 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
         {images.map((image) => (
           <div
             key={image.id}
-            className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden cursor-move hover:ring-2 hover:ring-blue-500 transition-all"
+            className={`flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden cursor-move transition-all ${
+              hoveredImageId === image.id ? 'ring-2 ring-blue-500' : ''
+            }`}
+            onMouseEnter={() => {
+              // Only set hover state if not currently dragging
+              if (!isDragging) {
+                setHoveredImageId(image.id);
+              }
+            }}
+            onMouseLeave={() => setHoveredImageId(null)}
           >
             <img
               src={image.url}
               alt={image.id}
               draggable
               onDragStart={(e) => handleDragStart(e, image.url)}
+              onDragEnd={handleDragEnd}
               className="w-full h-full object-cover cursor-pointer"
               loading="lazy"
               onClick={(e) => {

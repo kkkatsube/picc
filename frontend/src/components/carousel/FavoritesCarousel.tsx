@@ -33,6 +33,9 @@ export function FavoritesCarousel({
   const [draggedImageId, setDraggedImageId] = useState<number | null>(null);
   const [isDragOverCarousel, setIsDragOverCarousel] = useState(false);
   const [previewImage, setPreviewImage] = useState<string | null>(null);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [hoveredImageId, setHoveredImageId] = useState<number | null>(null);
+  const [deleteConfirmImageId, setDeleteConfirmImageId] = useState<number | null>(null);
 
   // ESCキーでプレビューを閉じる
   useEffect(() => {
@@ -55,9 +58,24 @@ export function FavoritesCarousel({
     setIsEditing(false);
   };
 
+  const handleDeleteImageClick = (imageId: number) => {
+    setDeleteConfirmImageId(imageId);
+  };
+
+  const handleConfirmImageDelete = (imageId: number) => {
+    onImageDelete(imageId);
+    setDeleteConfirmImageId(null);
+  };
+
+  const handleCancelImageDelete = () => {
+    setDeleteConfirmImageId(null);
+  };
+
   const handleImageDragStart = (e: React.DragEvent, imageId: number, imageUrl: string) => {
     console.log('FavoritesCarousel: Image drag start', { imageId, imageUrl });
     setDraggedImageId(imageId);
+    // Clear hover state immediately when drag starts to prevent hover color lingering
+    setHoveredImageId(null);
     e.dataTransfer.effectAllowed = 'copyMove';
     e.dataTransfer.setData('text/plain', imageUrl);
     console.log('FavoritesCarousel: dataTransfer set', e.dataTransfer.getData('text/plain'));
@@ -119,6 +137,7 @@ export function FavoritesCarousel({
 
   const handleImageDragEnd = () => {
     setDraggedImageId(null);
+    setHoveredImageId(null); // Clear hover state on drag end
   };
 
   // Handle drop from local image carousel
@@ -132,8 +151,13 @@ export function FavoritesCarousel({
   };
 
   const handleCarouselDragLeave = (e: React.DragEvent) => {
-    // Only clear if leaving the entire carousel container
-    if (e.currentTarget === e.target) {
+    // Clear drag-over state when leaving carousel
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX;
+    const y = e.clientY;
+
+    // Only clear if mouse is actually outside the carousel bounds
+    if (x < rect.left || x > rect.right || y < rect.top || y > rect.bottom) {
       setIsDragOverCarousel(false);
     }
   };
@@ -199,13 +223,35 @@ export function FavoritesCarousel({
           </div>
         )}
 
-        <button
-          onClick={() => onDelete(carousel.id)}
-          className="p-1 text-gray-400 hover:text-red-600 transition-colors"
-          title="カルーセルを削除"
-        >
-          <XMarkIcon className="h-4 w-4" />
-        </button>
+        {/* Delete UI */}
+        {showDeleteConfirm ? (
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-gray-600 whitespace-nowrap">削除しますか？</span>
+            <button
+              onClick={() => {
+                onDelete(carousel.id);
+                setShowDeleteConfirm(false);
+              }}
+              className="px-2 py-1 bg-red-500 text-white text-xs rounded hover:bg-red-600 transition-colors"
+            >
+              削除
+            </button>
+            <button
+              onClick={() => setShowDeleteConfirm(false)}
+              className="px-2 py-1 bg-gray-300 text-gray-700 text-xs rounded hover:bg-gray-400 transition-colors"
+            >
+              キャンセル
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="p-1 text-gray-400 hover:text-red-600 transition-colors"
+            title="カルーセルを削除"
+          >
+            <XMarkIcon className="h-4 w-4" />
+          </button>
+        )}
       </div>
 
       {/* Images */}
@@ -228,12 +274,21 @@ export function FavoritesCarousel({
             {carousel.images.map((image) => (
               <div
                 key={image.id}
-                className="relative w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move hover:ring-2 hover:ring-blue-500 transition-all flex-shrink-0"
+                className={`relative w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move transition-all flex-shrink-0 ${
+                  hoveredImageId === image.id && !draggedImageId ? 'ring-2 ring-blue-500' : ''
+                }`}
                 draggable
                 onDragStart={(e) => handleImageDragStart(e, image.id, image.image_url)}
                 onDragOver={handleImageDragOver}
                 onDrop={(e) => handleImageDrop(e, image.id)}
                 onDragEnd={handleImageDragEnd}
+                onMouseEnter={() => {
+                  // Only set hover state if not currently dragging
+                  if (!draggedImageId) {
+                    setHoveredImageId(image.id);
+                  }
+                }}
+                onMouseLeave={() => setHoveredImageId(null)}
               >
                 <img
                   src={image.image_url}
@@ -245,17 +300,41 @@ export function FavoritesCarousel({
                     setPreviewImage(image.image_url);
                   }}
                 />
-                {/* Delete button on hover */}
-                <button
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onImageDelete(image.id);
-                  }}
-                  className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
-                  title="画像を削除"
-                >
-                  <XMarkIcon className="h-3 w-3" />
-                </button>
+
+                {/* Delete confirmation overlay or delete button */}
+                {deleteConfirmImageId === image.id ? (
+                  <div className="absolute inset-0 bg-black bg-opacity-75 flex flex-col items-center justify-center gap-1 p-2">
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleConfirmImageDelete(image.id);
+                      }}
+                      className="w-full px-2 py-1 text-xs bg-red-600 text-white rounded hover:bg-red-700"
+                    >
+                      削除
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleCancelImageDelete();
+                      }}
+                      className="w-full px-2 py-1 text-xs bg-gray-200 text-gray-700 rounded hover:bg-gray-300"
+                    >
+                      キャンセル
+                    </button>
+                  </div>
+                ) : (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDeleteImageClick(image.id);
+                    }}
+                    className="absolute top-1 right-1 p-1 bg-red-500 text-white rounded-full opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600"
+                    title="画像を削除"
+                  >
+                    <XMarkIcon className="h-3 w-3" />
+                  </button>
+                )}
               </div>
             ))}
           </div>

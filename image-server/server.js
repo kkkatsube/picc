@@ -173,7 +173,7 @@ app.get('/random', (req, res) => {
       const relativePath = path.relative(IMAGES_DIR, filePath);
       return {
         id: path.basename(filePath),
-        url: `http://localhost:${PORT}/images/${relativePath.replace(/\\/g, '/')}`
+        url: `http://${req.get('host')}/images/${relativePath.replace(/\\/g, '/')}`
       };
     });
 
@@ -202,8 +202,8 @@ app.get('/health', (req, res) => {
   });
 });
 
-// サーバー起動
-app.listen(PORT, () => {
+// サーバー起動（全ネットワークインターフェースでリッスン）
+app.listen(PORT, '0.0.0.0', () => {
   console.log('='.repeat(50));
   console.log('PICC Image Server');
   console.log('='.repeat(50));

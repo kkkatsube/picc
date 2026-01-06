@@ -19,13 +19,15 @@ class StoreCanvasImageRequest extends FormRequest
     public function rules(): array
     {
         return [
-            // Allow both https:// and http://localhost for local development
+            // Allow https:// and local development URLs (localhost and private IP addresses)
             'add_picture_url' => [
                 'required',
                 'url',
                 function ($attribute, $value, $fail) {
-                    if (! preg_match('/^https:\/\//', $value) && ! preg_match('/^http:\/\/localhost/', $value)) {
-                        $fail('The '.$attribute.' must be a secure HTTPS URL or localhost HTTP URL.');
+                    // Allow HTTPS URLs or local development HTTP URLs (localhost, 127.x.x.x, 192.168.x.x, 10.x.x.x)
+                    if (! preg_match('/^https:\/\//', $value) &&
+                        ! preg_match('/^http:\/\/(localhost|127\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|10\.\d+\.\d+\.\d+)(:\d+)?/', $value)) {
+                        $fail('The '.$attribute.' must be a secure HTTPS URL or local development HTTP URL.');
                     }
                 },
             ],

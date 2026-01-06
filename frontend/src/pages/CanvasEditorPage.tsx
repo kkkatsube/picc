@@ -177,8 +177,8 @@ export default function CanvasEditorPage() {
             {/* This will be populated by FavoritesCarouselList with overflow logic */}
           </aside>
 
-          {/* Center Column: Canvas Workspace & Bottom Controls - 900px width */}
-          <div className="flex-shrink-0 space-y-3" style={{ width: '900px' }}>
+          {/* Center Column: Canvas Workspace & Bottom Controls - responsive width */}
+          <div className="flex-shrink-0 space-y-3 w-full" style={{ maxWidth: '900px' }}>
             {/* Canvas Workspace */}
             <CanvasWorkspace
               canvas={canvas}

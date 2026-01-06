@@ -11,7 +11,7 @@ export interface Folder {
   path: string;
 }
 
-const LOCAL_IMAGE_SERVER_URL = 'http://localhost:4000';
+const LOCAL_IMAGE_SERVER_URL = import.meta.env.VITE_IMAGE_SERVER_URL || 'http://localhost:4000';
 
 export type SortOrder = 'random' | 'asc' | 'desc';
 

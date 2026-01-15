@@ -43,45 +43,90 @@ export default function CanvasEditorPage() {
     const canvasWidth = canvas?.width || 1920;
     const targetWidth = canvasWidth * 0.3;
 
-    // Create a temporary image to get dimensions
-    const img = new Image();
-    img.crossOrigin = 'anonymous'; // Enable CORS
+    // Check if this is a video file
+    const isVideo = /\.(mp4|webm|ogg|mov)$/i.test(imageUrl);
 
-    img.onload = () => {
-      console.log('Image loaded:', { width: img.width, height: img.height });
-      const size = targetWidth / img.width;
+    if (isVideo) {
+      // For video files, use video element to get dimensions
+      const video = document.createElement('video');
+      video.crossOrigin = 'anonymous';
+      video.preload = 'metadata';
 
-      // Add image with calculated size, drop position, and dimensions
-      console.log('Adding image to canvas:', { imageUrl, x, y, size, width: img.width, height: img.height });
-      addImage({
-        add_picture_url: imageUrl,
-        x,
-        y,
-        size: Math.round(size * 100) / 100, // Round to 2 decimal places
-        width: img.width,
-        height: img.height,
-      });
-    };
+      video.onloadedmetadata = () => {
+        console.log('Video metadata loaded:', { width: video.videoWidth, height: video.videoHeight });
+        const size = targetWidth / video.videoWidth;
 
-    img.onerror = (error) => {
-      console.error('Failed to load image:', error);
-      // Fallback: add image with default size if loading fails
-      // Use estimated dimensions for common image sizes
-      const estimatedWidth = 800;
-      const estimatedHeight = 600;
-      const size = targetWidth / estimatedWidth;
+        // Add video with calculated size, drop position, and dimensions
+        console.log('Adding video to canvas:', { imageUrl, x, y, size, width: video.videoWidth, height: video.videoHeight });
+        addImage({
+          add_picture_url: imageUrl,
+          x,
+          y,
+          size: Math.round(size * 100) / 100, // Round to 2 decimal places
+          width: video.videoWidth,
+          height: video.videoHeight,
+        });
+      };
 
-      addImage({
-        add_picture_url: imageUrl,
-        x,
-        y,
-        size: Math.round(size * 100) / 100,
-        width: estimatedWidth,
-        height: estimatedHeight,
-      });
-    };
+      video.onerror = (error) => {
+        console.error('Failed to load video metadata:', error);
+        // Fallback: add video with 16:9 aspect ratio
+        const estimatedWidth = 1920;
+        const estimatedHeight = 1080;
+        const size = targetWidth / estimatedWidth;
 
-    img.src = imageUrl;
+        addImage({
+          add_picture_url: imageUrl,
+          x,
+          y,
+          size: Math.round(size * 100) / 100,
+          width: estimatedWidth,
+          height: estimatedHeight,
+        });
+      };
+
+      video.src = imageUrl;
+    } else {
+      // For image files, use Image element to get dimensions
+      const img = new Image();
+      img.crossOrigin = 'anonymous'; // Enable CORS
+
+      img.onload = () => {
+        console.log('Image loaded:', { width: img.width, height: img.height });
+        const size = targetWidth / img.width;
+
+        // Add image with calculated size, drop position, and dimensions
+        console.log('Adding image to canvas:', { imageUrl, x, y, size, width: img.width, height: img.height });
+        addImage({
+          add_picture_url: imageUrl,
+          x,
+          y,
+          size: Math.round(size * 100) / 100, // Round to 2 decimal places
+          width: img.width,
+          height: img.height,
+        });
+      };
+
+      img.onerror = (error) => {
+        console.error('Failed to load image:', error);
+        // Fallback: add image with default size if loading fails
+        // Use estimated dimensions for common image sizes
+        const estimatedWidth = 800;
+        const estimatedHeight = 600;
+        const size = targetWidth / estimatedWidth;
+
+        addImage({
+          add_picture_url: imageUrl,
+          x,
+          y,
+          size: Math.round(size * 100) / 100,
+          width: estimatedWidth,
+          height: estimatedHeight,
+        });
+      };
+
+      img.src = imageUrl;
+    }
   };
 
   const handleImageDragStart = (_imageUrl: string) => {

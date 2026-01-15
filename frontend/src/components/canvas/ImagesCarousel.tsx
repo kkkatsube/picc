@@ -8,6 +8,11 @@ interface ImagesCarouselProps {
   onDeleteImage: (imageId: number) => void;
 }
 
+// Check if URL is a video file
+const isVideoFile = (url: string): boolean => {
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
 export function ImagesCarousel({ images, isDeletingImage, onDeleteImage }: ImagesCarouselProps) {
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null);
 
@@ -43,21 +48,33 @@ export function ImagesCarousel({ images, isDeletingImage, onDeleteImage }: Image
       >
         {images && images.length > 0 ? (
           <div className="flex gap-2 overflow-x-auto pb-2 min-h-24">
-            {images.map((image) => (
-              <div
-                key={image.id}
-                className="relative w-24 h-24 bg-gray-100 rounded overflow-hidden group flex-shrink-0"
-              >
-                <img
-                  src={image.uri}
-                  alt={`Canvas image ${image.id}`}
-                  className="w-full h-full object-cover"
-                  loading="lazy"
-                  onError={(e) => {
-                    // Fallback for broken images
-                    e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="96" height="96" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af"%3E?%3C/text%3E%3C/svg%3E';
-                  }}
-                />
+            {images.map((image) => {
+              const isVideo = isVideoFile(image.uri);
+              return (
+                <div
+                  key={image.id}
+                  className="relative w-24 h-24 bg-gray-100 rounded overflow-hidden group flex-shrink-0"
+                >
+                  {isVideo ? (
+                    <video
+                      src={image.uri}
+                      className="w-full h-full object-cover"
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={image.uri}
+                      alt={`Canvas image ${image.id}`}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
+                      onError={(e) => {
+                        // Fallback for broken images
+                        e.currentTarget.src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="96" height="96"%3E%3Crect width="96" height="96" fill="%23f3f4f6"/%3E%3Ctext x="50%25" y="50%25" text-anchor="middle" dy=".3em" fill="%239ca3af"%3E?%3C/text%3E%3C/svg%3E';
+                      }}
+                    />
+                  )}
 
                 {/* Image Info Overlay (on hover) */}
                 <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-50 transition-all flex items-center justify-center opacity-0 group-hover:opacity-100">
@@ -95,7 +112,8 @@ export function ImagesCarousel({ images, isDeletingImage, onDeleteImage }: Image
                   </button>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex items-center justify-center h-24">

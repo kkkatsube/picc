@@ -11,6 +11,11 @@ interface CanvasWorkspaceProps {
   onEditClick?: () => void;
 }
 
+// Check if URL is a video file
+const isVideoFile = (url: string): boolean => {
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
 export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isUpdatingImage, onEditClick }: CanvasWorkspaceProps) {
   const canvasContainerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1.0);
@@ -129,7 +134,7 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isU
   }, [isFullscreen]);
 
   // Image drag handlers
-  const handleImagePointerDown = (e: PointerEvent<SVGImageElement>, image: CanvasImage) => {
+  const handleImagePointerDown = (e: PointerEvent<SVGImageElement | SVGRectElement>, image: CanvasImage) => {
     // Disable drag in fullscreen mode (read-only)
     if (isFullscreen) return;
 
@@ -831,6 +836,9 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isU
             const baseHandleSize = displaySize / 100; // ~19px for 1920px
             const handleSize = isFullscreen ? 16 : (isTouchDevice ? baseHandleSize * 2 : baseHandleSize);
 
+            // Check if this is a video file
+            const isVideo = isVideoFile(image.uri);
+
             return (
               <g key={image.id}>
                 {/* ClipPath for cropping */}
@@ -845,31 +853,87 @@ export function CanvasWorkspace({ canvas, images, onUpdateImage, onAddImage, isU
                   </clipPath>
                 </defs>
 
-                {/* Image */}
-                <image
-                  href={image.uri}
-                  x={displayX * renderScale}
-                  y={displayY * renderScale}
-                  width={imageWidth * imageSize * renderScale}
-                  height={imageHeight * imageSize * renderScale}
-                  clipPath={`url(#clip-${image.id})`}
-                  style={{
-                    cursor: isFullscreen
-                      ? 'default'
-                      : isCropping && cropEdge
-                      ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
-                      : isResizing
-                      ? 'nwse-resize'
-                      : isDragging
-                      ? 'grabbing'
-                      : 'move',
-                    opacity: isDragging || isResizing || isCropping ? 0.7 : 1
-                  }}
-                  preserveAspectRatio="none"
-                  onPointerDown={(e) => handleImagePointerDown(e, image)}
-                  onPointerEnter={() => setHoveredImageId(image.id)}
-                  onPointerLeave={() => setHoveredImageId(null)}
-                />
+                {/* Image or Video */}
+                {isVideo ? (
+                  <>
+                    {/* Video element in foreignObject */}
+                    <foreignObject
+                      x={displayX * renderScale}
+                      y={displayY * renderScale}
+                      width={imageWidth * imageSize * renderScale}
+                      height={imageHeight * imageSize * renderScale}
+                      clipPath={`url(#clip-${image.id})`}
+                      style={{
+                        overflow: 'visible',
+                        opacity: isDragging || isResizing || isCropping ? 0.7 : 1,
+                        pointerEvents: 'none'
+                      }}
+                    >
+                      <video
+                        src={image.uri}
+                        autoPlay
+                        loop
+                        muted
+                        playsInline
+                        style={{
+                          width: '100%',
+                          height: '100%',
+                          objectFit: 'fill',
+                          display: 'block',
+                          pointerEvents: 'none'
+                        }}
+                      />
+                    </foreignObject>
+                    {/* Transparent rect overlay for event handling */}
+                    <rect
+                      x={displayX * renderScale}
+                      y={displayY * renderScale}
+                      width={imageWidth * imageSize * renderScale}
+                      height={imageHeight * imageSize * renderScale}
+                      clipPath={`url(#clip-${image.id})`}
+                      fill="transparent"
+                      style={{
+                        cursor: isFullscreen
+                          ? 'default'
+                          : isCropping && cropEdge
+                          ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
+                          : isResizing
+                          ? 'nwse-resize'
+                          : isDragging
+                          ? 'grabbing'
+                          : 'move'
+                      }}
+                      onPointerDown={(e) => handleImagePointerDown(e, image)}
+                      onPointerEnter={() => setHoveredImageId(image.id)}
+                      onPointerLeave={() => setHoveredImageId(null)}
+                    />
+                  </>
+                ) : (
+                  <image
+                    href={image.uri}
+                    x={displayX * renderScale}
+                    y={displayY * renderScale}
+                    width={imageWidth * imageSize * renderScale}
+                    height={imageHeight * imageSize * renderScale}
+                    clipPath={`url(#clip-${image.id})`}
+                    style={{
+                      cursor: isFullscreen
+                        ? 'default'
+                        : isCropping && cropEdge
+                        ? (cropEdge === 'top' || cropEdge === 'bottom' ? 'ns-resize' : 'ew-resize')
+                        : isResizing
+                        ? 'nwse-resize'
+                        : isDragging
+                        ? 'grabbing'
+                        : 'move',
+                      opacity: isDragging || isResizing || isCropping ? 0.7 : 1
+                    }}
+                    preserveAspectRatio="none"
+                    onPointerDown={(e) => handleImagePointerDown(e, image)}
+                    onPointerEnter={() => setHoveredImageId(image.id)}
+                    onPointerLeave={() => setHoveredImageId(null)}
+                  />
+                )}
 
                 {/* Resize handles - show on hover or selected (hide when any operation is active or in fullscreen) */}
                 {!isFullscreen && (isHovered || isSelected) && !isDragging && !isResizing && !isCropping && (

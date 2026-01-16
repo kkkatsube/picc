@@ -16,6 +16,11 @@ interface FavoritesCarouselProps {
   layout?: 'horizontal' | 'grid' | 'grid-large'; // Layout mode: horizontal scroll, 4-column grid, or 9-column grid
 }
 
+// Check if URL is a video file
+const isVideoFile = (url: string): boolean => {
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
 export function FavoritesCarousel({
   carousel,
   onDelete,
@@ -271,35 +276,51 @@ export function FavoritesCarousel({
             : layout === 'grid-large'
             ? "grid grid-cols-8 gap-2 pb-2"
             : "flex gap-2 overflow-x-auto pb-2 min-h-24"}>
-            {carousel.images.map((image) => (
-              <div
-                key={image.id}
-                className={`relative w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move transition-all flex-shrink-0 ${
-                  hoveredImageId === image.id && !draggedImageId ? 'ring-2 ring-blue-500' : ''
-                }`}
-                draggable
-                onDragStart={(e) => handleImageDragStart(e, image.id, image.image_url)}
-                onDragOver={handleImageDragOver}
-                onDrop={(e) => handleImageDrop(e, image.id)}
-                onDragEnd={handleImageDragEnd}
-                onMouseEnter={() => {
-                  // Only set hover state if not currently dragging
-                  if (!draggedImageId) {
-                    setHoveredImageId(image.id);
-                  }
-                }}
-                onMouseLeave={() => setHoveredImageId(null)}
-              >
-                <img
-                  src={image.image_url}
-                  alt={`Image ${image.id}`}
-                  className="w-full h-full object-cover cursor-pointer"
-                  loading="lazy"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setPreviewImage(image.image_url);
+            {carousel.images.map((image) => {
+              const isVideo = isVideoFile(image.image_url);
+              return (
+                <div
+                  key={image.id}
+                  className={`relative w-24 h-24 bg-gray-100 rounded overflow-hidden group cursor-move transition-all flex-shrink-0 ${
+                    hoveredImageId === image.id && !draggedImageId ? 'ring-2 ring-blue-500' : ''
+                  }`}
+                  draggable
+                  onDragStart={(e) => handleImageDragStart(e, image.id, image.image_url)}
+                  onDragOver={handleImageDragOver}
+                  onDrop={(e) => handleImageDrop(e, image.id)}
+                  onDragEnd={handleImageDragEnd}
+                  onMouseEnter={() => {
+                    // Only set hover state if not currently dragging
+                    if (!draggedImageId) {
+                      setHoveredImageId(image.id);
+                    }
                   }}
-                />
+                  onMouseLeave={() => setHoveredImageId(null)}
+                >
+                  {isVideo ? (
+                    <video
+                      src={image.image_url}
+                      className="w-full h-full object-cover cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(image.image_url);
+                      }}
+                      muted
+                      loop
+                      playsInline
+                    />
+                  ) : (
+                    <img
+                      src={image.image_url}
+                      alt={`Image ${image.id}`}
+                      className="w-full h-full object-cover cursor-pointer"
+                      loading="lazy"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setPreviewImage(image.image_url);
+                      }}
+                    />
+                  )}
 
                 {/* Delete confirmation overlay or delete button */}
                 {deleteConfirmImageId === image.id ? (
@@ -336,7 +357,8 @@ export function FavoritesCarousel({
                   </button>
                 )}
               </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="flex items-center justify-center h-24">
@@ -347,7 +369,7 @@ export function FavoritesCarousel({
         )}
       </div>
 
-      {/* 画像プレビューモーダル */}
+      {/* 画像・動画プレビューモーダル */}
       {previewImage && createPortal(
         <div
           onClick={() => setPreviewImage(null)}
@@ -389,19 +411,36 @@ export function FavoritesCarousel({
           >
             ×
           </button>
-          <img
-            src={previewImage}
-            alt="プレビュー"
-            onClick={() => setPreviewImage(null)}
-            style={{
-              maxHeight: '95vh',
-              maxWidth: '95vw',
-              objectFit: 'contain',
-              display: 'block',
-              cursor: 'pointer',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            }}
-          />
+          {isVideoFile(previewImage) ? (
+            <video
+              src={previewImage}
+              controls
+              autoPlay
+              loop
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxHeight: '95vh',
+                maxWidth: '95vw',
+                objectFit: 'contain',
+                display: 'block',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              }}
+            />
+          ) : (
+            <img
+              src={previewImage}
+              alt="プレビュー"
+              onClick={() => setPreviewImage(null)}
+              style={{
+                maxHeight: '95vh',
+                maxWidth: '95vw',
+                objectFit: 'contain',
+                display: 'block',
+                cursor: 'pointer',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              }}
+            />
+          )}
         </div>,
         document.body
       )}

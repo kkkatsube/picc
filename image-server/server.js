@@ -8,8 +8,8 @@ const app = express();
 const PORT = process.env.PORT || 3001;
 const IMAGES_DIR = process.env.IMAGE_DIRECTORY;
 
-// 画像拡張子の判定
-const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp)$/i;
+// 画像・動画拡張子の判定
+const IMAGE_EXTENSIONS = /\.(jpg|jpeg|png|gif|webp|mp4)$/i;
 
 // CORS設定（すべてのオリジンから許可）
 app.use(cors());

@@ -7,6 +7,11 @@ interface LocalImageCarouselProps {
   onImageDragStart: (imageUrl: string) => void;
 }
 
+// Check if URL is a video file
+const isVideoFile = (url: string): boolean => {
+  return /\.(mp4|webm|ogg|mov)$/i.test(url);
+};
+
 export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps) {
   const { images, folders, currentPath, sortOrder, isLoading, error, fetchRandomImages, loadMore, navigateToFolder, changeSortOrder } = useLocalImages();
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -56,7 +61,7 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
     }
   };
 
-  const handleDragStart = (e: React.DragEvent<HTMLImageElement>, imageUrl: string) => {
+  const handleDragStart = (e: React.DragEvent<HTMLImageElement | HTMLVideoElement>, imageUrl: string) => {
     setIsDragging(true); // Set dragging state
     setHoveredImageId(null); // Clear hover state when drag starts
     e.dataTransfer.effectAllowed = 'copy';
@@ -178,35 +183,55 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
         className="flex gap-2 overflow-x-auto pb-2"
         style={{ scrollbarWidth: 'thin' }}
       >
-        {images.map((image) => (
-          <div
-            key={image.id}
-            className={`flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden cursor-move transition-all ${
-              hoveredImageId === image.id ? 'ring-2 ring-blue-500' : ''
-            }`}
-            onMouseEnter={() => {
-              // Only set hover state if not currently dragging
-              if (!isDragging) {
-                setHoveredImageId(image.id);
-              }
-            }}
-            onMouseLeave={() => setHoveredImageId(null)}
-          >
-            <img
-              src={image.url}
-              alt={image.id}
-              draggable
-              onDragStart={(e) => handleDragStart(e, image.url)}
-              onDragEnd={handleDragEnd}
-              className="w-full h-full object-cover cursor-pointer"
-              loading="lazy"
-              onClick={(e) => {
-                e.stopPropagation();
-                setPreviewImage(image.url);
+        {images.map((image) => {
+          const isVideo = isVideoFile(image.url);
+          return (
+            <div
+              key={image.id}
+              className={`flex-shrink-0 w-24 h-24 bg-gray-100 rounded overflow-hidden cursor-move transition-all ${
+                hoveredImageId === image.id ? 'ring-2 ring-blue-500' : ''
+              }`}
+              onMouseEnter={() => {
+                // Only set hover state if not currently dragging
+                if (!isDragging) {
+                  setHoveredImageId(image.id);
+                }
               }}
-            />
-          </div>
-        ))}
+              onMouseLeave={() => setHoveredImageId(null)}
+            >
+              {isVideo ? (
+                <video
+                  src={image.url}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, image.url)}
+                  onDragEnd={handleDragEnd}
+                  className="w-full h-full object-cover cursor-pointer"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(image.url);
+                  }}
+                  muted
+                  loop
+                  playsInline
+                />
+              ) : (
+                <img
+                  src={image.url}
+                  alt={image.id}
+                  draggable
+                  onDragStart={(e) => handleDragStart(e, image.url)}
+                  onDragEnd={handleDragEnd}
+                  className="w-full h-full object-cover cursor-pointer"
+                  loading="lazy"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setPreviewImage(image.url);
+                  }}
+                />
+              )}
+            </div>
+          );
+        })}
 
         {isLoading && (
           <div className="flex-shrink-0 w-24 h-24 bg-gray-100 rounded flex items-center justify-center">
@@ -240,7 +265,7 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
         )}
       </div>
 
-      {/* 画像プレビューモーダル */}
+      {/* 画像・動画プレビューモーダル */}
       {previewImage && createPortal(
         <div
           onClick={() => setPreviewImage(null)}
@@ -282,19 +307,36 @@ export function LocalImageCarousel({ onImageDragStart }: LocalImageCarouselProps
           >
             ×
           </button>
-          <img
-            src={previewImage}
-            alt="プレビュー"
-            onClick={() => setPreviewImage(null)}
-            style={{
-              maxHeight: '95vh',
-              maxWidth: '95vw',
-              objectFit: 'contain',
-              display: 'block',
-              cursor: 'pointer',
-              boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-            }}
-          />
+          {isVideoFile(previewImage) ? (
+            <video
+              src={previewImage}
+              controls
+              autoPlay
+              loop
+              onClick={(e) => e.stopPropagation()}
+              style={{
+                maxHeight: '95vh',
+                maxWidth: '95vw',
+                objectFit: 'contain',
+                display: 'block',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              }}
+            />
+          ) : (
+            <img
+              src={previewImage}
+              alt="プレビュー"
+              onClick={() => setPreviewImage(null)}
+              style={{
+                maxHeight: '95vh',
+                maxWidth: '95vw',
+                objectFit: 'contain',
+                display: 'block',
+                cursor: 'pointer',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+              }}
+            />
+          )}
         </div>,
         document.body
       )}
